@@ -100,23 +100,6 @@ dialog::backdrop{background:rgba(10,20,15,.45)}
 .past{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);padding-bottom:8px}
 .past select{font:inherit;font-size:14px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
 .past select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-.upload{display:grid;gap:12px;padding:18px 20px;border:1px dashed var(--line);border-radius:12px;background:var(--surface)}
-.upload h2{margin:0;font-size:15px;font-weight:700}
-.upload p{margin:0;font-size:13px;color:var(--muted)}
-.urow{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-.ufield{display:grid;gap:4px;font-size:12px;color:var(--muted)}
-.ufield input,.ufield select{font:inherit;font-size:14px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
-.ufield input:focus-visible,.ufield select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-.btn{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:8px;font-weight:700;font-size:14px;background:var(--accent);color:var(--surface)}
-.btn:hover{filter:brightness(1.08)}
-.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
-.btn:focus-visible,.sr:focus-visible+.btn{outline:2px solid var(--accent);outline-offset:2px}
-.btn[aria-disabled="true"]{opacity:.5;pointer-events:none}
-.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-.preview{display:grid;gap:10px;padding:12px 14px;border-radius:8px;background:var(--accent-soft);font-size:14px}
-.preview b{font-family:"IBM Plex Mono",monospace;font-weight:500}
-.status{font-size:13px;min-height:1.2em}
-.status.ok{color:var(--plus)}.status.err{color:var(--minus)}
 .empty{padding:24px;text-align:center;color:var(--muted)}
 footer{font-size:12px;color:var(--muted)}
 </style>
@@ -162,24 +145,6 @@ footer{font-size:12px;color:var(--muted)}
 </table>
 </div>
 <footer>順位は合計PTの高い順。見出しの「対局数」「平均PT」「平均順位」「トップ率」「ラス回避率」を押すと並べ替えできる(順位列は合計PT順のまま)。プレイヤー名を押すと、同卓した相手ごとの相性表が開く。</footer>
-
-<section class="upload" id="upload" aria-labelledby="uh">
-  <h2 id="uh">CSVをアップロード(更新担当者用)</h2>
-  <p>雀魂の大会管理画面から書き出したCSVを選ぶと、対局日時から月を読み取って「年月.csv」の名前で保存する。同じ月のファイルがあれば上書きする。</p>
-  <div class="urow">
-    <input id="file" class="sr" type="file" accept=".csv,text/csv">
-    <label for="file" class="btn ghost">CSVファイルを選ぶ</label>
-  </div>
-  <div class="preview" id="preview" hidden>
-    <div id="pvtext"></div>
-    <div class="urow">
-      <label class="ufield">保存する月<select id="upMonth"></select></label>
-      <label class="ufield" style="flex:1 1 220px">合言葉<input id="pass" type="password" autocomplete="off" placeholder="合言葉を入力"></label>
-    </div>
-    <div class="urow"><button class="btn" id="apply" type="button">アップロードする</button><button class="btn ghost" id="cancel" type="button">やめる</button></div>
-  </div>
-  <div class="status" id="status" role="status" aria-live="polite"></div>
-</section>
 
 </div>
 
@@ -371,76 +336,6 @@ function rebuild(){
   load(h==="total"||SEASONS.has(h)?h:MONTHS[0]);
   if(BAD.length) console.warn("読めなかったCSV:",BAD);
 })();
-/* ===== CSVアップロード =====
-   upload-key.json に、合言葉で暗号化したGitHubトークンが入っている(PBKDF2-SHA256 + AES-GCM)。
-   合言葉が正しいときだけブラウザ内で復号し、GitHubのAPIで「年月.csv」を書き込む。 */
-function setStatus(msg,cls){const s=$("status");s.textContent=msg;s.className="status"+(cls?" "+cls:"")}
-const b64d=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
-function b64e(buf){const u=new Uint8Array(buf);let s="";for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s)}
-async function decryptToken(pass){
-  const r=await fetch(`upload-key.json?t=${Date.now()}`,{cache:"no-store"});
-  if(!r.ok) throw {code:"nokey"};
-  const k=await r.json();
-  const base=await crypto.subtle.importKey("raw",new TextEncoder().encode(pass),"PBKDF2",false,["deriveKey"]);
-  const key=await crypto.subtle.deriveKey({name:"PBKDF2",salt:b64d(k.salt),iterations:k.iter,hash:"SHA-256"},base,{name:"AES-GCM",length:256},false,["decrypt"]);
-  try{return new TextDecoder().decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:b64d(k.iv)},key,b64d(k.ct)))}
-  catch(e){throw {code:"badpass"}}
-}
-let UP=null;
-$("file").addEventListener("change",async e=>{
-  const file=e.target.files[0]; e.target.value=""; if(!file)return;
-  setStatus("");$("preview").hidden=true;UP=null;
-  try{
-    const buf=await file.arrayBuffer();
-    const {games,skipped}=toGames(decode(buf));
-    const cnt={};games.forEach(g=>{const ym=g[0].slice(0,7).replace("-","");if(isYM(ym))cnt[ym]=(cnt[ym]||0)+1});
-    const yms=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a]);
-    if(!yms.length) throw new Error("対局日時から月を読み取れなかった。");
-    const ym=yms[0], n=new Set(games.flatMap(g=>g[1].map(s=>s[0]))).size;
-    const ds=games.map(g=>g[0].slice(0,10)).sort();
-    UP={buf,games,name:file.name};
-    const opts=new Set([ym,...yms]); const now=new Date();
-    for(let i=-2;i<=1;i++){const d=new Date(now.getFullYear(),now.getMonth()+i,1);opts.add(`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}`)}
-    $("upMonth").innerHTML=[...opts].sort().reverse().map(v=>`<option value="${v}"${v===ym?" selected":""}>${ymLabel(v)}(${v}.csv)</option>`).join("");
-    $("pvtext").innerHTML=`<b>${esc(file.name)}</b><br>期間 <b>${ds[0].replace(/-/g,"/")} – ${ds[ds.length-1].replace(/-/g,"/")}</b>・対局数 <b>${games.length}</b>・参加者 <b>${n}</b>人${skipped?`(非表示の${skipped}局は除外)`:""}`+
-      (yms.length>1?`<br>複数の月の対局が入っている(${yms.map(v=>`${ymLabel(v)} ${cnt[v]}局`).join("、")})。保存する月を確かめてほしい。`:"")+
-      (SEASONS.has(ym)?`<br>${ymLabel(ym)}のデータ(${SEASONS.get(ym).length}局)を上書きする。`:"");
-    $("preview").hidden=false; $("pass").focus();
-  }catch(err){ setStatus(err.message||"CSVを読めなかった。","err") }
-});
-$("cancel").addEventListener("click",()=>{UP=null;$("preview").hidden=true;$("pass").value="";setStatus("")});
-$("pass").addEventListener("keydown",e=>{if(e.key==="Enter")$("apply").click()});
-$("apply").addEventListener("click",async()=>{
-  if(!UP) return;
-  const ym=$("upMonth").value, pass=$("pass").value;
-  if(!pass){setStatus("合言葉を入力してほしい。","err");$("pass").focus();return}
-  if(!REPO_OWNER||!REPO_NAME){setStatus("このページの場所からGitHubのリポジトリを特定できない。GitHub Pagesで公開したページから操作してほしい。","err");return}
-  const btn=$("apply"); btn.setAttribute("aria-disabled","true");
-  try{
-    setStatus("合言葉を確かめている…");
-    const token=await decryptToken(pass);
-    setStatus("アップロードしている…");
-    const api=`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${ym}.csv`;
-    const hdr={"Authorization":`Bearer ${token}`,"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"};
-    let sha;
-    const cur=await fetch(api+`?t=${Date.now()}`,{headers:hdr,cache:"no-store"});
-    if(cur.ok) sha=(await cur.json()).sha;
-    else if(cur.status!==404) throw {code:"http",status:cur.status};
-    const put=await fetch(api,{method:"PUT",headers:{...hdr,"Content-Type":"application/json"},
-      body:JSON.stringify({message:`${ym}.csv を更新(ランキングページからアップロード)`,content:b64e(UP.buf),...(sha?{sha}:{})})});
-    if(!put.ok) throw {code:"http",status:put.status};
-    SEASONS.set(ym,UP.games); rebuild(); load(ym);
-    $("preview").hidden=true; $("pass").value=""; UP=null;
-    setStatus(`${ym}.csv を保存した。この画面には反映済み。ほかの人の画面には1〜2分後に反映される。`,"ok");
-  }catch(err){
-    const c=err&&err.code;
-    if(c==="badpass") setStatus("合言葉が違う。","err");
-    else if(c==="nokey") setStatus("アップロード用の鍵ファイル(upload-key.json)が見つからない。管理者に連絡してほしい。","err");
-    else if(c==="http"&&(err.status===401||err.status===403)) setStatus("GitHubに書き込みを断られた。鍵の有効期限切れか権限不足の可能性がある。管理者に連絡してほしい。","err");
-    else if(c==="http"&&err.status===409) setStatus("ほかの更新と重なった。少し待ってからもう一度試してほしい。","err");
-    else setStatus("アップロードに失敗した。通信状態を確かめて、もう一度試してほしい。","err");
-  }finally{ btn.removeAttribute("aria-disabled") }
-});
 $("tabMonth").addEventListener("click",()=>MONTHS.length&&load(MONTHS[0]));
 $("tabTotal").addEventListener("click",()=>MONTHS.length&&load("total"));
 $("month").addEventListener("change",e=>e.target.value&&load(e.target.value));
