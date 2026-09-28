@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MONOQLO PTランキング</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#f3f5f2;--surface:#ffffff;--ink:#17201b;--muted:#5d6b63;--line:#dde3dd;
+  --accent:#1d6a4f;--accent-soft:#e2efe8;--plus:#1d6a4f;--minus:#b23a2e;
+  --r1:#1d6a4f;--r2:#6fa58c;--r3:#c9b98f;--r4:#c7695c;
+  --gold:#b58a1f;--silver:#7d8791;--bronze:#9a5f35;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
+  --bg:#101512;--surface:#171e1a;--ink:#e6ece8;--muted:#98a69e;--line:#2a332e;
+  --accent:#6cc39c;--accent-soft:#1d2d25;--plus:#6cc39c;--minus:#f0877a;
+  --r1:#4fae86;--r2:#3a6f58;--r3:#8a7d5c;--r4:#b25a4e;
+  --gold:#e0b84a;--silver:#aab3bb;--bronze:#cf8c5a;}}
+:root[data-theme="dark"]{color-scheme:dark;
+  --bg:#101512;--surface:#171e1a;--ink:#e6ece8;--muted:#98a69e;--line:#2a332e;
+  --accent:#6cc39c;--accent-soft:#1d2d25;--plus:#6cc39c;--minus:#f0877a;
+  --r1:#4fae86;--r2:#3a6f58;--r3:#8a7d5c;--r4:#b25a4e;
+  --gold:#e0b84a;--silver:#aab3bb;--bronze:#cf8c5a;}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif;font-size:15px;line-height:1.6;padding-inline:16px;padding-block:32px 48px}
+.wrap{max-width:880px;margin:0 auto;display:grid;gap:24px}
+header{display:grid;gap:6px}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.12em;color:var(--accent);text-transform:uppercase}
+h1{font-size:clamp(26px,5vw,36px);font-weight:900;line-height:1.25;margin:0;text-wrap:balance}
+.meta{color:var(--muted);font-size:13px;display:flex;flex-wrap:wrap;gap:4px 18px}
+.meta b{font-family:"IBM Plex Mono",monospace;font-weight:500;color:var(--ink)}
+.tools{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.search{flex:1 1 220px;max-width:320px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit}
+.search:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.legend{display:flex;gap:12px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.tablebox{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+table{width:100%;border-collapse:collapse;min-width:780px;font-variant-numeric:tabular-nums}
+th,td{padding:10px 12px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+tbody tr:last-child td{border-bottom:0}
+th{font-size:12px;font-weight:500;color:var(--muted);letter-spacing:.04em;position:sticky;top:0;background:var(--surface)}
+th button{all:unset;cursor:pointer;display:inline-flex;gap:4px;align-items:center}
+th button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+th button[aria-sort] ::after{content:""}
+th .arrow{font-size:10px;opacity:.35}
+th button.on{color:var(--ink)} th button.on .arrow{opacity:1;color:var(--accent)}
+th.l,td.l{text-align:left}
+td.rank{font-family:"IBM Plex Mono",monospace;font-weight:600;width:3.5em;text-align:center}
+.medal{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;color:#fff;font-size:13px}
+.m1{background:var(--gold)}.m2{background:var(--silver)}.m3{background:var(--bronze)}
+td.name{font-weight:700;max-width:14em;overflow:hidden;text-overflow:ellipsis}
+td.pt{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:16px}
+.plus{color:var(--plus)}.minus{color:var(--minus)}
+td.num{font-family:"IBM Plex Mono",monospace;font-size:14px}
+.bar{display:flex;width:120px;height:10px;border-radius:3px;overflow:hidden;background:var(--line);margin-left:auto}
+.bar span:nth-child(1){background:var(--r1)}.bar span:nth-child(2){background:var(--r2)}.bar span:nth-child(3){background:var(--r3)}.bar span:nth-child(4){background:var(--r4)}
+.counts{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);margin-top:3px}
+tbody tr:hover td{background:var(--accent-soft)}
+tr.top td{background:color-mix(in srgb,var(--accent-soft) 55%,transparent)}
+
+.pname{all:unset;cursor:pointer;font-weight:700;border-bottom:1px dashed var(--muted);max-width:14em;overflow:hidden;text-overflow:ellipsis;display:inline-block;vertical-align:bottom}
+.pname:hover{color:var(--accent);border-bottom-color:var(--accent)}
+.pname:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink);padding:0;width:min(760px,calc(100vw - 32px));max-height:calc(100dvh - 48px)}
+dialog::backdrop{background:rgba(10,20,15,.45)}
+.dhead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:20px 20px 12px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface);z-index:1}
+.dhead h2{margin:0;font-size:22px;font-weight:900;line-height:1.3;word-break:break-all}
+.dsub{font-size:13px;color:var(--muted);margin-top:4px;display:flex;flex-wrap:wrap;gap:2px 14px}
+.dsub b{font-family:"IBM Plex Mono",monospace;font-weight:500;color:var(--ink)}
+.close{all:unset;cursor:pointer;flex:none;width:36px;height:36px;display:grid;place-items:center;border-radius:8px;font-size:20px;color:var(--muted)}
+.close:hover{background:var(--accent-soft);color:var(--ink)}
+.close:focus-visible{outline:2px solid var(--accent)}
+.dbody{padding:12px 20px 20px}
+.dnote{font-size:12px;color:var(--muted);margin:0 0 10px}
+.vs{min-width:540px}
+.vs td,.vs th{padding:8px 10px}
+.vs th{position:static}
+.vs .oppbtn{all:unset;cursor:pointer;font-weight:700}
+.vs .oppbtn:hover{color:var(--accent)}
+.vs .oppbtn:focus-visible{outline:2px solid var(--accent);border-radius:3px}
+.orank{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);margin-left:6px;font-weight:400}
+.wbar{display:inline-block;width:56px;height:6px;border-radius:3px;background:color-mix(in srgb,var(--minus) 55%,transparent);overflow:hidden;vertical-align:middle;margin-right:8px}
+.wbar span{display:block;height:100%;background:var(--plus)}
+.dtbox{overflow-x:auto}
+.empty{padding:24px;text-align:center;color:var(--muted)}
+footer{font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="eyebrow">Mahjong Soul · MONOQLO</div>
+  <h1 id="ttl">PTランキング</h1>
+  <div class="meta" id="meta"><span>読み込み中…</span></div>
+</header>
+<div class="tools">
+  <input id="q" class="search" type="search" placeholder="プレイヤー名で検索" aria-label="プレイヤー名で検索">
+  <div class="legend"><span><i style="background:var(--r1)"></i>1位</span><span><i style="background:var(--r2)"></i>2位</span><span><i style="background:var(--r3)"></i>3位</span><span><i style="background:var(--r4)"></i>4位</span></div>
+</div>
+<div class="tablebox">
+<table>
+<thead><tr>
+ <th style="text-align:center">順位</th><th class="l">プレイヤー</th>
+ <th><button data-k="pt" class="on">合計PT<span class="arrow">▼</span></button></th>
+ <th><button data-k="n">対局数<span class="arrow">▼</span></button></th>
+ <th><button data-k="avg">平均PT<span class="arrow">▼</span></button></th>
+ <th><button data-k="ar">平均順位<span class="arrow">▲</span></button></th>
+ <th><button data-k="top">トップ率<span class="arrow">▼</span></button></th>
+ <th><button data-k="avoid">ラス回避率<span class="arrow">▼</span></button></th>
+ <th>着順分布</th>
+</tr></thead>
+<tbody id="tb"><tr><td colspan="9" class="empty">読み込み中…</td></tr></tbody>
+</table>
+</div>
+<footer>順位は合計PTの高い順。見出しの「対局数」「平均PT」「平均順位」「トップ率」「ラス回避率」を押すと並べ替えできる(順位列は合計PT順のまま)。プレイヤー名を押すと、同卓した相手ごとの相性表が開く。</footer>
+
+</div>
+
+<dialog id="dlg" aria-labelledby="dname">
+  <div class="dhead"><div><h2 id="dname"></h2><div class="dsub" id="dsub"></div></div><button class="close" id="dclose" aria-label="閉じる">×</button></div>
+  <div class="dbody">
+    <p class="dnote">同卓した対局だけで集計した、このプレイヤーの成績。獲得PTの高い順(相性の良い順)。先着率は相手より上の順位で終えた割合。</p>
+    <div class="dtbox"><table class="vs"><thead><tr><th class="l">対戦相手</th><th>同卓数</th><th>獲得PT</th><th>平均PT</th><th>平均順位</th><th class="l">先着率</th></tr></thead><tbody id="vtb"></tbody></table></div>
+  </div>
+</dialog>
+
+<script>
+const $=id=>document.getElementById(id);
+const f=(v,s)=>(v>0?"+":v<0?"−":"")+Math.abs(v).toFixed(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let DATA=null,D=[],key="pt",pending=null;
+
+function compute(games){
+  const P=new Map();
+  for(const [,seats] of games){
+    seats.forEach(([id,name,pt],i)=>{
+      let p=P.get(id); if(!p){p={id,name,pt:0,n:0,r:[0,0,0,0],vs:new Map()};P.set(id,p)}
+      p.pt+=pt;p.n++;p.r[i]++;
+      seats.forEach(([oid],j)=>{ if(j===i)return;
+        let h=p.vs.get(oid); if(!h){h=[0,0,0,0];p.vs.set(oid,h)}
+        h[0]++;h[1]+=pt;h[2]+=(i<j);h[3]+=i+1; });
+    });
+  }
+  const L=[...P.values()].sort((a,b)=>b.pt-a.pt);
+  const ix=new Map(L.map((p,i)=>[p.id,i]));
+  return L.map((p,i)=>{const n=p.n,r=p.r;return{i,rank:i+1,name:p.name,pt:Math.round(p.pt*10)/10,n,r,
+    avg:p.pt/n,ar:(r[0]+2*r[1]+3*r[2]+4*r[3])/n,top:r[0]/n,avoid:1-r[3]/n,
+    vs:[...p.vs].map(([o,h])=>[ix.get(o),h[0],Math.round(h[1]*10)/10,h[2],h[3]])}});
+}
+function periodLabel(games){
+  const ds=games.map(g=>g[0].slice(0,10)).sort(); const a=ds[0],b=ds[ds.length-1];
+  const ym=s=>s.slice(0,7);
+  return {a,b,title: ym(a)===ym(b)?`${+a.slice(5,7)}月 PTランキング`:"PTランキング"};
+}
+function load(data){
+  DATA=data; D=compute(data.games);
+  const pl=periodLabel(data.games);
+  $("ttl").textContent=pl.title;
+  $("meta").innerHTML=`<span>集計期間 <b>${pl.a.replace(/-/g,"/")} – ${pl.b.slice(5).replace("-","/")}</b></span><span>対局数 <b>${data.games.length}</b></span><span>参加者 <b>${D.length}</b>人</span>`;
+  
+  render();
+}
+function render(){
+  const q=$("q").value.trim().toLowerCase();
+  let L=D.filter(d=>!q||d.name.toLowerCase().includes(q));
+  L=[...L].sort((a,b)=>key==="ar"?a.ar-b.ar:b[key]-a[key]);
+  if(!L.length){$("tb").innerHTML='<tr><td colspan="9" class="empty">該当するプレイヤーがいない</td></tr>';return}
+  $("tb").innerHTML=L.map(d=>`<tr class="${d.rank<=3?"top":""}">
+<td class="rank">${d.rank<=3?`<span class="medal m${d.rank}">${d.rank}</span>`:d.rank}</td>
+<td class="l name"><button class="pname" data-i="${d.i}" title="${esc(d.name)} の相性表を見る">${esc(d.name)}</button></td>
+<td class="pt ${d.pt>=0?"plus":"minus"}">${f(d.pt,1)}</td>
+<td class="num">${d.n}</td>
+<td class="num ${d.avg>=0?"plus":"minus"}">${f(d.avg,2)}</td>
+<td class="num">${d.ar.toFixed(2)}</td>
+<td class="num">${(d.top*100).toFixed(1)}%</td>
+<td class="num">${(d.avoid*100).toFixed(1)}%</td>
+<td><div class="bar">${d.r.map(c=>`<span style="width:${c/d.n*100}%"></span>`).join("")}</div><div class="counts">${d.r.join(" / ")}</div></td>
+</tr>`).join("");
+}
+document.querySelectorAll("th button").forEach(b=>b.addEventListener("click",()=>{key=b.dataset.k;document.querySelectorAll("th button").forEach(x=>x.classList.toggle("on",x===b));render()}));
+$("q").addEventListener("input",render);
+
+/* 相性表 */
+const dlg=$("dlg");
+function openVs(i){
+  const p=D[i];
+  $("dname").textContent=p.name;
+  $("dsub").innerHTML=`<span>総合 <b>${p.rank}位</b></span><span>合計PT <b class="${p.pt>=0?"plus":"minus"}">${f(p.pt,1)}</b></span><span>対局数 <b>${p.n}</b></span><span>対戦相手 <b>${p.vs.length}</b>人</span>`;
+  const V=[...p.vs].sort((a,b)=>b[2]-a[2]||b[1]-a[1]);
+  $("vtb").innerHTML=V.map(([o,g,pt,w,rs])=>{const q=D[o],wr=w/g*100;return `<tr>
+<td class="l"><button class="oppbtn" data-i="${o}">${esc(q.name)}</button><span class="orank">${q.rank}位</span></td>
+<td class="num">${g}</td>
+<td class="pt ${pt>=0?"plus":"minus"}">${f(pt,1)}</td>
+<td class="num ${pt>=0?"plus":"minus"}">${f(pt/g,2)}</td>
+<td class="num">${(rs/g).toFixed(2)}</td>
+<td class="l num"><span class="wbar"><span style="width:${wr}%"></span></span>${wr.toFixed(0)}%<span class="orank">${w}-${g-w}</span></td></tr>`}).join("");
+  if(!dlg.open) dlg.showModal();
+  $("dclose").focus({preventScroll:true}); dlg.scrollTop=0;
+}
+$("tb").addEventListener("click",e=>{const b=e.target.closest(".pname");if(b)openVs(+b.dataset.i)});
+$("vtb").addEventListener("click",e=>{const b=e.target.closest(".oppbtn");if(b)openVs(+b.dataset.i)});
+$("dclose").addEventListener("click",()=>dlg.close());
+dlg.addEventListener("click",e=>{if(e.target===dlg)dlg.close()});
+
+/* CSV 読み込み */
+function parseCSV(text){
+  const rows=[];let row=[],cell="",q=false;
+  for(let i=0;i<text.length;i++){const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){cell+='"';i++} else q=false } else cell+=c; }
+    else if(c==='"') q=true;
+    else if(c===','){row.push(cell);cell=""}
+    else if(c==='\n'||c==='\r'){ if(c==='\r'&&text[i+1]==='\n')i++; row.push(cell);rows.push(row);row=[];cell="" }
+    else cell+=c;
+  }
+  if(cell!==""||row.length){row.push(cell);rows.push(row)}
+  return rows.filter(r=>r.some(v=>v.trim()!==""));
+}
+function toGames(text){
+  const rows=parseCSV(text.replace(/^﻿/,""));
+  if(rows.length<2) throw new Error("CSVにデータ行がない。");
+  const h=rows[0].map(s=>s.trim()); const col=n=>h.indexOf(n);
+  const need=["開始時間"];for(let i=1;i<=4;i++)need.push(`${i}位プレイヤー名`,`${i}位最終点数`);
+  const miss=need.filter(n=>col(n)<0);
+  if(miss.length) throw new Error(`必要な列が見つからない: ${miss.join("、")}。雀魂の大会管理画面から書き出したCSVを選んでほしい。`);
+  const hid=col("非表示状態"),games=[];let skipped=0;
+  rows.slice(1).forEach((r,k)=>{
+    if(hid>=0&&(r[hid]||"").trim().toLowerCase()==="yes"){skipped++;return}
+    const seats=[];
+    for(let i=1;i<=4;i++){
+      const raw=(r[col(`${i}位プレイヤー名`)]||"").trim(), pt=parseFloat(r[col(`${i}位最終点数`)]);
+      const m=raw.match(/^\[[^\]]*\]\[(\d+)\](.*)$/);
+      if(!raw||isNaN(pt)) throw new Error(`${k+2}行目の${i}位のデータが読めない。`);
+      seats.push(m?[m[1],m[2],pt]:[raw,raw,pt]);
+    }
+    games.push([(r[col("開始時間")]||"").trim(),seats]);
+  });
+  if(!games.length) throw new Error("集計できる対局がない。");
+  return {games,skipped};
+}
+function decode(buf){
+  try{return new TextDecoder("utf-8",{fatal:true}).decode(buf)}catch(e){return new TextDecoder("shift_jis").decode(buf)}
+}
+function fail(msg){$("tb").innerHTML=`<tr><td colspan="9" class="empty">${esc(msg)}</td></tr>`;$("meta").innerHTML=""}
+fetch("data.csv?t="+Date.now(),{cache:"no-store"})
+  .then(r=>{if(!r.ok)throw new Error("data.csv が見つからない。リポジトリに data.csv という名前でCSVを置いてほしい。");return r.arrayBuffer()})
+  .then(buf=>{const {games}=toGames(decode(buf));load({games})})
+  .catch(err=>fail(err.message||"データを読み込めなかった。"));
+</script>
+
+</body>
+</html>
