@@ -269,7 +269,7 @@ function decode(buf){
 function fail(msg){$("tb").innerHTML=`<tr><td colspan="9" class="empty">${esc(msg)}</td></tr>`;$("meta").innerHTML=""}
 
 /* シーズン(月)ファイルを探す: FIRST_SEASON から今月の翌月まで YYYYMM.csv を順に確かめる */
-const FIRST_SEASON="202609";
+const FIRST_SEASON="202604";
 function monthList(){
   const out=[];let y=+FIRST_SEASON.slice(0,4),m=+FIRST_SEASON.slice(4);
   const now=new Date(), endY=now.getFullYear(), endM=now.getMonth()+2;
