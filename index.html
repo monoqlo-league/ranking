@@ -268,13 +268,35 @@ function decode(buf){
 }
 function fail(msg){$("tb").innerHTML=`<tr><td colspan="9" class="empty">${esc(msg)}</td></tr>`;$("meta").innerHTML=""}
 
-/* シーズン(月)ファイルを探す: FIRST_SEASON から今月の翌月まで YYYYMM.csv を順に確かめる */
-const FIRST_SEASON="202604";
-function monthList(){
-  const out=[];let y=+FIRST_SEASON.slice(0,4),m=+FIRST_SEASON.slice(4);
-  const now=new Date(), endY=now.getFullYear(), endM=now.getMonth()+2;
-  while(y*12+m<=endY*12+endM){out.push(`${y}${String(m).padStart(2,"0")}`);m++;if(m>12){m=1;y++}}
-  return out;
+/* シーズン(月)ファイルを探す
+   1. GitHubのAPIでリポジトリ直下のファイル一覧を取り、YYYYMM.csv をすべて拾う
+   2. APIが使えないとき(回数制限・独自ドメインなど)は、来月から過去へ順にファイルを確かめる */
+const REPO_OWNER=location.hostname.endsWith(".github.io")?location.hostname.split(".")[0]:"";
+const REPO_NAME=location.pathname.split("/").filter(Boolean)[0]||(REPO_OWNER?`${REPO_OWNER}.github.io`:"");
+const isYM=s=>/^\d{4}(0[1-9]|1[0-2])$/.test(s);
+async function listByApi(){
+  if(!REPO_OWNER||!REPO_NAME) return null;
+  try{
+    const r=await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/?t=${Date.now()}`);
+    if(!r.ok) return null;
+    const files=await r.json();
+    return files.map(f=>f.name).filter(n=>/^\d{6}\.csv$/.test(n)).map(n=>n.slice(0,6)).filter(isYM);
+  }catch(e){return null}
+}
+function prevYM(ym){let y=+ym.slice(0,4),m=+ym.slice(4)-1;if(m<1){m=12;y--}return `${y}${String(m).padStart(2,"0")}`}
+async function probeBackward(){
+  // 来月分から過去へ6か月ずつ確かめる。見つかった後に12か月続けて無ければ打ち切る(何も無ければ3年で打ち切る)
+  const now=new Date(); let y=now.getFullYear(),m=now.getMonth()+2; if(m>12){m=1;y++}
+  let ym=`${y}${String(m).padStart(2,"0")}`;
+  const found=[];let miss=0,steps=0;
+  while(steps<240){
+    const batch=[];for(let j=0;j<6;j++){batch.push(ym);ym=prevYM(ym)}
+    steps+=6;
+    const res=await Promise.all(batch.map(async b=>[b,await loadSeason(b)]));
+    for(const [b,g] of res){ if(g){found.push([b,g]);miss=0} else miss++ }
+    if(found.length?miss>=12:steps>=36) break;
+  }
+  return found;
 }
 async function loadSeason(ym){
   const r=await fetch(`${ym}.csv?t=${Date.now()}`,{cache:"no-store"});
@@ -284,11 +306,14 @@ async function loadSeason(ym){
 }
 const BAD=[];
 (async()=>{
-  const res=await Promise.all(monthList().map(async ym=>[ym,await loadSeason(ym)]));
+  const listed=await listByApi();
+  const res=listed&&listed.length
+    ? await Promise.all(listed.map(async ym=>[ym,await loadSeason(ym)]))
+    : await probeBackward();
   for(const [ym,g] of res) if(g) SEASONS.set(ym,g);
   MONTHS=[...SEASONS.keys()].sort().reverse();
   if(!MONTHS.length){fail(BAD.length?`CSVを読めなかった: ${BAD.join("、")}`:"CSVが見つからない。リポジトリに 202609.csv のような「年4桁+月2桁.csv」の名前でCSVを置いてほしい。");return}
-  const seen=new Set();
+const seen=new Set();
   for(const ym of MONTHS) for(const g of SEASONS.get(ym)){ if(g[2]){if(seen.has(g[2]))continue;seen.add(g[2])} TOTAL.push(g) }
   $("month").innerHTML='<option value="" disabled>選択</option>'+MONTHS.map(ym=>`<option value="${ym}">${ymLabel(ym)}</option>`).join("");
   const h=location.hash.slice(1);
