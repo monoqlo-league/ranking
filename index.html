@@ -11,24 +11,30 @@
   --bg:#f3f5f2;--surface:#ffffff;--ink:#17201b;--muted:#5d6b63;--line:#dde3dd;
   --accent:#1d6a4f;--accent-soft:#e2efe8;--plus:#1d6a4f;--minus:#b23a2e;
   --r1:#1d6a4f;--r2:#6fa58c;--r3:#c9b98f;--r4:#c7695c;
-  --gold:#b58a1f;--silver:#7d8791;--bronze:#9a5f35;
+  --gold:#b58a1f;--stalk:#8dbb6a;--node:#5f8f45;--leaf:#4f9a4a;--silver:#7d8791;--bronze:#9a5f35;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
   --bg:#101512;--surface:#171e1a;--ink:#e6ece8;--muted:#98a69e;--line:#2a332e;
   --accent:#6cc39c;--accent-soft:#1d2d25;--plus:#6cc39c;--minus:#f0877a;
   --r1:#4fae86;--r2:#3a6f58;--r3:#8a7d5c;--r4:#b25a4e;
-  --gold:#e0b84a;--silver:#aab3bb;--bronze:#cf8c5a;}}
+  --gold:#e0b84a;--stalk:#4f7a3c;--node:#3a5c2c;--leaf:#3f7a3a;--silver:#aab3bb;--bronze:#cf8c5a;}}
 :root[data-theme="dark"]{color-scheme:dark;
   --bg:#101512;--surface:#171e1a;--ink:#e6ece8;--muted:#98a69e;--line:#2a332e;
   --accent:#6cc39c;--accent-soft:#1d2d25;--plus:#6cc39c;--minus:#f0877a;
   --r1:#4fae86;--r2:#3a6f58;--r3:#8a7d5c;--r4:#b25a4e;
-  --gold:#e0b84a;--silver:#aab3bb;--bronze:#cf8c5a;}
+  --gold:#e0b84a;--stalk:#4f7a3c;--node:#3a5c2c;--leaf:#3f7a3a;--silver:#aab3bb;--bronze:#cf8c5a;}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif;font-size:15px;line-height:1.6;padding-inline:16px;padding-block:32px 48px}
 .wrap{max-width:880px;margin:0 auto;display:grid;gap:24px}
 header{display:grid;gap:6px}
-.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.12em;color:var(--accent);text-transform:uppercase}
+.brand{display:flex;gap:14px;align-items:flex-start}
+.htext{display:grid;gap:6px;min-width:0}
+.panda{flex:none;width:64px;height:64px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.12))}
+.bamboo{position:fixed;left:0;bottom:0;width:min(220px,34vw);height:auto;z-index:0;pointer-events:none;opacity:.9}
+.wrap{position:relative;z-index:1}
+@media (max-width:600px){.panda{width:48px;height:48px}.bamboo{opacity:.5}}
+.eyebrow{font-size:13px;font-weight:700;letter-spacing:.12em;color:var(--accent)}
 h1{font-size:clamp(26px,5vw,36px);font-weight:900;line-height:1.25;margin:0;text-wrap:balance}
 .meta{color:var(--muted);font-size:13px;display:flex;flex-wrap:wrap;gap:4px 18px}
 .meta b{font-family:"IBM Plex Mono",monospace;font-weight:500;color:var(--ink)}
@@ -101,9 +107,25 @@ footer{font-size:12px;color:var(--muted)}
 <body>
 <div class="wrap">
 <header>
-  <div class="eyebrow">Mahjong Soul · MONOQLO</div>
+  <div class="brand">
+  <svg class="panda" viewBox="0 0 64 64" role="img" aria-label="パンダ">
+    <circle cx="15" cy="14" r="9" fill="#23262a"/><circle cx="49" cy="14" r="9" fill="#23262a"/>
+    <circle cx="15" cy="14" r="4" fill="#4a4f55"/><circle cx="49" cy="14" r="4" fill="#4a4f55"/>
+    <ellipse cx="32" cy="35" rx="25" ry="23" fill="#ffffff" stroke="#23262a" stroke-width="2"/>
+    <ellipse cx="22" cy="33" rx="6.5" ry="8.5" transform="rotate(-28 22 33)" fill="#23262a"/>
+    <ellipse cx="42" cy="33" rx="6.5" ry="8.5" transform="rotate(28 42 33)" fill="#23262a"/>
+    <circle cx="23" cy="32" r="2.6" fill="#ffffff"/><circle cx="41" cy="32" r="2.6" fill="#ffffff"/>
+    <circle cx="23.8" cy="31.2" r="1" fill="#23262a"/><circle cx="41.8" cy="31.2" r="1" fill="#23262a"/>
+    <ellipse cx="32" cy="41" rx="3.4" ry="2.4" fill="#23262a"/>
+    <path d="M28.5 45.5 Q32 48.5 35.5 45.5" fill="none" stroke="#23262a" stroke-width="1.6" stroke-linecap="round"/>
+    <ellipse cx="14.5" cy="43" rx="4" ry="2.4" fill="#f4a6b4" opacity=".75"/><ellipse cx="49.5" cy="43" rx="4" ry="2.4" fill="#f4a6b4" opacity=".75"/>
+  </svg>
+  <div class="htext">
+  <div class="eyebrow">MONOQLO麻雀部</div>
   <h1 id="ttl">PTランキング</h1>
   <div class="meta" id="meta"><span>読み込み中…</span></div>
+  </div>
+  </div>
 </header>
 <div class="tools">
   <input id="q" class="search" type="search" placeholder="プレイヤー名で検索" aria-label="プレイヤー名で検索">
@@ -144,6 +166,7 @@ footer{font-size:12px;color:var(--muted)}
     <div class="dtbox"><table class="vs"><thead><tr><th class="l">対戦相手</th><th>同卓数</th><th>獲得PT</th><th>平均PT</th><th>平均順位</th><th class="l">先着率</th></tr></thead><tbody id="vtb"></tbody></table></div>
   </div>
 </dialog>
+<svg class="bamboo" viewBox="-44 0 264 320" aria-hidden="true"><rect x="30" y="262" width="14" height="55" rx="5.4" fill="var(--stalk)"/><rect x="29" y="316" width="16" height="4" rx="2" fill="var(--node)"/><rect x="30" y="204" width="14" height="55" rx="5.4" fill="var(--stalk)"/><rect x="29" y="258" width="16" height="4" rx="2" fill="var(--node)"/><rect x="30" y="146" width="14" height="55" rx="5.4" fill="var(--stalk)"/><rect x="29" y="200" width="16" height="4" rx="2" fill="var(--node)"/><rect x="30" y="88" width="14" height="55" rx="5.4" fill="var(--stalk)"/><rect x="29" y="142" width="16" height="4" rx="2" fill="var(--node)"/><rect x="30" y="40" width="14" height="45" rx="5.4" fill="var(--stalk)"/><rect x="29" y="84" width="16" height="4" rx="2" fill="var(--node)"/><rect x="78" y="262" width="11" height="55" rx="4.2" fill="var(--stalk)"/><rect x="77" y="316" width="13" height="4" rx="2" fill="var(--node)"/><rect x="78" y="204" width="11" height="55" rx="4.2" fill="var(--stalk)"/><rect x="77" y="258" width="13" height="4" rx="2" fill="var(--node)"/><rect x="78" y="146" width="11" height="55" rx="4.2" fill="var(--stalk)"/><rect x="77" y="200" width="13" height="4" rx="2" fill="var(--node)"/><rect x="78" y="110" width="11" height="33" rx="4.2" fill="var(--stalk)"/><rect x="77" y="142" width="13" height="4" rx="2" fill="var(--node)"/><rect x="118" y="262" width="9" height="55" rx="3.5" fill="var(--stalk)"/><rect x="117" y="316" width="11" height="4" rx="2" fill="var(--node)"/><rect x="118" y="204" width="9" height="55" rx="3.5" fill="var(--stalk)"/><rect x="117" y="258" width="11" height="4" rx="2" fill="var(--node)"/><rect x="118" y="170" width="9" height="31" rx="3.5" fill="var(--stalk)"/><rect x="117" y="200" width="11" height="4" rx="2" fill="var(--node)"/><path d="M0 0 Q20.7 -9 46 0 Q20.7 9 0 0Z" transform="translate(44 70) rotate(-25)" fill="var(--leaf)"/><path d="M0 0 Q18.0 -9 40 0 Q18.0 9 0 0Z" transform="translate(44 72) rotate(-60)" fill="var(--leaf)"/><path d="M0 0 Q19.8 -9 44 0 Q19.8 9 0 0Z" transform="translate(30 100) rotate(200)" fill="var(--leaf)"/><path d="M0 0 Q17.1 -9 38 0 Q17.1 9 0 0Z" transform="translate(30 98) rotate(160)" fill="var(--leaf)"/><path d="M0 0 Q18.900000000000002 -9 42 0 Q18.900000000000002 9 0 0Z" transform="translate(89 140) rotate(-20)" fill="var(--leaf)"/><path d="M0 0 Q16.2 -9 36 0 Q16.2 9 0 0Z" transform="translate(89 142) rotate(-55)" fill="var(--leaf)"/><path d="M0 0 Q18.0 -9 40 0 Q18.0 9 0 0Z" transform="translate(78 175) rotate(195)" fill="var(--leaf)"/><path d="M0 0 Q17.1 -9 38 0 Q17.1 9 0 0Z" transform="translate(127 196) rotate(-15)" fill="var(--leaf)"/><path d="M0 0 Q14.4 -9 32 0 Q14.4 9 0 0Z" transform="translate(127 198) rotate(-50)" fill="var(--leaf)"/><path d="M0 0 Q15.3 -9 34 0 Q15.3 9 0 0Z" transform="translate(118 230) rotate(190)" fill="var(--leaf)"/><path d="M0 0 Q18.0 -8 40 0 Q18.0 8 0 0Z" transform="translate(44 160) rotate(-10)" fill="var(--leaf)"/><path d="M0 0 Q16.2 -7 36 0 Q16.2 7 0 0Z" transform="translate(30 200) rotate(185)" fill="var(--leaf)"/></svg>
 
 <script>
 const $=id=>document.getElementById(id);
