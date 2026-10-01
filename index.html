@@ -80,6 +80,20 @@ dialog::backdrop{background:rgba(10,20,15,.45)}
 .close:hover{background:var(--accent-soft);color:var(--ink)}
 .close:focus-visible{outline:2px solid var(--accent)}
 .dbody{padding:12px 20px 20px}
+.dscope{display:inline-block;font-size:12px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:2px 10px;margin-bottom:6px}
+.awards{display:grid;gap:8px;margin:4px 0 18px}
+.dbody h3{margin:0;font-size:15px;font-weight:700}
+.dbody h3 span{font-size:12px;font-weight:400;color:var(--muted);margin-left:6px}
+.vsh{margin-bottom:6px!important}
+.awc{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.awc div{border:1px solid var(--line);border-radius:8px;padding:6px 4px;text-align:center;font-size:12px;color:var(--muted)}
+.awc b{display:block;font-family:"IBM Plex Mono",monospace;font-size:20px;color:var(--ink);line-height:1.3}
+.awc .on1{border-color:var(--gold)}.awc .on2{border-color:var(--silver)}.awc .on3{border-color:var(--bronze)}
+.awl{display:flex;flex-wrap:wrap;gap:6px;font-size:12px}
+.awl span{border-radius:999px;padding:2px 9px;background:var(--bg);border:1px solid var(--line);font-variant-numeric:tabular-nums}
+.awl .r1{border-color:var(--gold)}.awl .r2{border-color:var(--silver)}.awl .r3{border-color:var(--bronze)}
+.awl .prov{border-style:dashed;color:var(--muted)}
+.awnone{font-size:13px;color:var(--muted);margin:0}
 .dnote{font-size:12px;color:var(--muted);margin:0 0 10px}
 .vs{min-width:540px}
 .vs td,.vs th{padding:8px 10px}
@@ -149,8 +163,13 @@ footer{font-size:12px;color:var(--muted)}
 </div>
 
 <dialog id="dlg" aria-labelledby="dname">
-  <div class="dhead"><div><h2 id="dname"></h2><div class="dsub" id="dsub"></div></div><button class="close" id="dclose" aria-label="閉じる">×</button></div>
+  <div class="dhead"><div><div class="dscope" id="dscope"></div><h2 id="dname"></h2><div class="dsub" id="dsub"></div></div><button class="close" id="dclose" aria-label="閉じる">×</button></div>
   <div class="dbody">
+    <section class="awards" aria-labelledby="awh">
+      <h3 id="awh">入賞記録 <span>月間ランキング1〜5位</span></h3>
+      <div id="awards"></div>
+    </section>
+    <h3 class="vsh" id="vsh">相性表</h3>
     <p class="dnote">同卓した対局だけで集計した、このプレイヤーの成績。獲得PTの高い順(相性の良い順)。先着率は相手より上の順位で終えた割合。</p>
     <div class="dtbox"><table class="vs"><thead><tr><th class="l">対戦相手</th><th>同卓数</th><th>獲得PT</th><th>平均PT</th><th class="l">先着率</th></tr></thead><tbody id="vtb"></tbody></table></div>
   </div>
@@ -161,7 +180,7 @@ footer{font-size:12px;color:var(--muted)}
 const $=id=>document.getElementById(id);
 const f=(v,s)=>(v>0?"+":v<0?"−":"")+Math.abs(v).toFixed(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-let D=[],key="pt",CUR=null,MONTHS=[],SEASONS=new Map(),TOTAL=[];
+let D=[],key="pt",CUR=null,MONTHS=[],SEASONS=new Map(),TOTAL=[],AWARDS=new Map();
 
 function compute(games){
   const P=new Map();
@@ -176,7 +195,7 @@ function compute(games){
   }
   const L=[...P.values()].sort((a,b)=>b.pt-a.pt);
   const ix=new Map(L.map((p,i)=>[p.id,i]));
-  return L.map((p,i)=>{const n=p.n,r=p.r;return{i,rank:i+1,name:p.name,pt:Math.round(p.pt*10)/10,n,r,
+  return L.map((p,i)=>{const n=p.n,r=p.r;return{i,id:p.id,rank:i+1,name:p.name,pt:Math.round(p.pt*10)/10,n,r,
     avg:p.pt/n,ar:(r[0]+2*r[1]+3*r[2]+4*r[3])/n,top:r[0]/n,avoid:1-r[3]/n,
     vs:[...p.vs].map(([o,h])=>[ix.get(o),h[0],Math.round(h[1]*10)/10,h[2],h[3]])}});
 }
@@ -219,9 +238,24 @@ $("q").addEventListener("input",render);
 
 /* 相性表 */
 const dlg=$("dlg");
+function curYM(){const d=new Date();return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}`}
+function renderAwards(id){
+  const list=(AWARDS.get(id)||[]).slice().sort((a,b)=>b[0].localeCompare(a[0]));
+  const now=curYM(), fixed=list.filter(([ym])=>ym!==now), cnt=[0,0,0,0,0];
+  fixed.forEach(([,r])=>cnt[r-1]++);
+  const prov=list.find(([ym])=>ym===now);
+  $("awards").innerHTML=list.length?
+    `<div class="awc">${cnt.map((c,k)=>`<div class="${c?"on"+(k+1):""}"><b>${c}</b>${k+1}位</div>`).join("")}</div>
+     <div class="awl">${list.map(([ym,r])=>`<span class="r${r}${ym===now?" prov":""}">${ym.slice(0,4)}年${ym.slice(4)}月 ${r}位${ym===now?"(集計中)":""}</span>`).join("")}</div>`+
+     (prov?`<p class="awnone">今月(${ymLabel(now)})の順位は集計中のため、回数には含めていない。</p>`:"")
+    :'<p class="awnone">入賞記録はまだない。</p>';
+}
 function openVs(i){
   const p=D[i];
   $("dname").textContent=p.name;
+  $("dscope").textContent=CUR==="total"?"通算の成績・相性表":`${ymLabel(CUR)}の成績・相性表`;
+  $("vsh").textContent=CUR==="total"?"相性表(通算)":`相性表(${ymLabel(CUR)})`;
+  renderAwards(p.id);
   $("dsub").innerHTML=`<span>総合 <b>${p.rank}位</b></span><span>合計PT <b class="${p.pt>=0?"plus":"minus"}">${f(p.pt,1)}</b></span><span>対局数 <b>${p.n}</b></span><span>対戦相手 <b>${p.vs.length}</b>人</span>`;
   const V=[...p.vs].sort((a,b)=>b[2]-a[2]||b[1]-a[1]);
   $("vtb").innerHTML=V.map(([o,g,pt,w,rs])=>{const q=D[o],wr=w/g*100;return `<tr>
@@ -321,6 +355,9 @@ function rebuild(){
   if(!MONTHS.length) return false;
   const seen=new Set(); TOTAL=[];
   for(const ym of MONTHS) for(const g of SEASONS.get(ym)){ if(g[2]){if(seen.has(g[2]))continue;seen.add(g[2])} TOTAL.push(g) }
+  AWARDS=new Map();
+  for(const ym of MONTHS) compute(SEASONS.get(ym)).slice(0,5).forEach(d=>{
+    if(!AWARDS.has(d.id)) AWARDS.set(d.id,[]); AWARDS.get(d.id).push([ym,d.rank]); });
   $("month").innerHTML='<option value="" disabled>選択</option>'+MONTHS.map(ym=>`<option value="${ym}">${ym.slice(0,4)}年${ym.slice(4)}月</option>`).join("");
   return true;
 }
