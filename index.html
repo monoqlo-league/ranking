@@ -323,7 +323,10 @@ function fail(msg){$("tb").innerHTML=`<tr><td colspan="9" class="empty">${esc(ms
    1. GitHubのAPIでリポジトリ直下のファイル一覧を取り、YYYYMM.csv をすべて拾う
    2. APIが使えないとき(回数制限・独自ドメインなど)は、来月から過去へ順にファイルを確かめる */
 const REPO_OWNER=location.hostname.endsWith(".github.io")?location.hostname.split(".")[0]:"";
-const REPO_NAME=location.pathname.split("/").filter(Boolean)[0]||(REPO_OWNER?`${REPO_OWNER}.github.io`:"");
+/* データ(年月CSV・ban.csv)は別リポジトリに置く。名前を変えたらここも変える */
+const DATA_REPO="monoqlo-data";
+const REPO_NAME=REPO_OWNER?DATA_REPO:"";
+const DATA_BASE=REPO_OWNER?`${location.origin}/${DATA_REPO}/`:"";  // GitHub Pages以外(手元での確認)では同じ場所から読む
 const isYM=s=>/^\d{4}(0[1-9]|1[0-2])$/.test(s);
 async function listByApi(){
   if(!REPO_OWNER||!REPO_NAME) return null;
@@ -350,7 +353,7 @@ async function probeBackward(){
   return found;
 }
 async function loadSeason(ym){
-  const r=await fetch(`${ym}.csv?t=${Date.now()}`,{cache:"no-store"});
+  const r=await fetch(`${DATA_BASE}${ym}.csv?t=${Date.now()}`,{cache:"no-store"});
   if(!r.ok) return null;
   try{return toGames(decode(await r.arrayBuffer())).games}
   catch(err){console.warn(ym,err);BAD.push(`${ym}.csv(${err.message})`);return null}
@@ -359,7 +362,7 @@ const BAD=[];
 /* BANリスト: ban.csv(1列目=プレイヤー、2列目=BAN月 YYYYMM)。無ければBANなし */
 async function loadBans(){
   try{
-    const r=await fetch(`ban.csv?t=${Date.now()}`,{cache:"no-store"}); if(!r.ok) return;
+    const r=await fetch(`${DATA_BASE}ban.csv?t=${Date.now()}`,{cache:"no-store"}); if(!r.ok) return;
     for(const row of parseCSV(decode(await r.arrayBuffer()).replace(/^\uFEFF/,""))){
       const m=(row[0]||"").match(/\[(\d+)\]|^\s*(\d+)\s*$/), ym=(row[1]||"").trim();
       if(!m||!isYM(ym)) continue;  // 見出し行や不正な行は読み飛ばす
@@ -385,7 +388,7 @@ function rebuild(){
     ? await Promise.all(listed.map(async ym=>[ym,await loadSeason(ym)]))
     : await probeBackward();
   for(const [ym,g] of res) if(g) SEASONS.set(ym,g);
-  if(!rebuild()){fail(BAD.length?`CSVを読めなかった: ${BAD.join("、")}`:"CSVが見つからない。リポジトリに 202609.csv のような「年4桁+月2桁.csv」の名前でCSVを置いてほしい。");return}
+  if(!rebuild()){fail(BAD.length?`CSVを読めなかった: ${BAD.join("、")}`:`CSVが見つからない。データ用リポジトリ(${DATA_REPO})に 202609.csv のような「年4桁+月2桁.csv」の名前でCSVを置き、GitHub Pagesを有効にしてほしい。`);return}
   const h=location.hash.slice(1);
   load(h==="total"||SEASONS.has(h)?h:MONTHS[0]);
   if(BAD.length) console.warn("読めなかったCSV:",BAD);
