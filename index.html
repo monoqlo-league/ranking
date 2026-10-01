@@ -327,6 +327,13 @@ const REPO_OWNER=location.hostname.endsWith(".github.io")?location.hostname.spli
 const DATA_REPO="monoqlo-data";
 const REPO_NAME=REPO_OWNER?DATA_REPO:"";
 const DATA_BASE=REPO_OWNER?`${location.origin}/${DATA_REPO}/`:"";  // GitHub Pages以外(手元での確認)では同じ場所から読む
+/* データ用リポジトリのファイルを取る。GitHub Pagesで見つからなければ、GitHubの生ファイル(raw)から取る */
+async function fetchData(name){
+  const q=`?t=${Date.now()}`;
+  let r=await fetch(DATA_BASE+name+q,{cache:"no-store"}).catch(()=>null);
+  if((!r||!r.ok)&&REPO_OWNER) r=await fetch(`https://raw.githubusercontent.com/${REPO_OWNER}/${DATA_REPO}/HEAD/${name}${q}`,{cache:"no-store"}).catch(()=>null);
+  return r||{ok:false,status:0};
+}
 const isYM=s=>/^\d{4}(0[1-9]|1[0-2])$/.test(s);
 async function listByApi(){
   if(!REPO_OWNER||!REPO_NAME) return null;
@@ -353,7 +360,7 @@ async function probeBackward(){
   return found;
 }
 async function loadSeason(ym){
-  const r=await fetch(`${DATA_BASE}${ym}.csv?t=${Date.now()}`,{cache:"no-store"});
+  const r=await fetchData(`${ym}.csv`);
   if(!r.ok) return null;
   try{return toGames(decode(await r.arrayBuffer())).games}
   catch(err){console.warn(ym,err);BAD.push(`${ym}.csv(${err.message})`);return null}
@@ -362,7 +369,7 @@ const BAD=[];
 /* BANリスト: ban.csv(1列目=プレイヤー、2列目=BAN月 YYYYMM)。無ければBANなし */
 async function loadBans(){
   try{
-    const r=await fetch(`${DATA_BASE}ban.csv?t=${Date.now()}`,{cache:"no-store"}); if(!r.ok) return;
+    const r=await fetchData("ban.csv"); if(!r.ok) return;
     for(const row of parseCSV(decode(await r.arrayBuffer()).replace(/^\uFEFF/,""))){
       const m=(row[0]||"").match(/\[(\d+)\]|^\s*(\d+)\s*$/), ym=(row[1]||"").trim();
       if(!m||!isYM(ym)) continue;  // 見出し行や不正な行は読み飛ばす
