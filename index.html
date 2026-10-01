@@ -114,6 +114,9 @@ dialog::backdrop{background:rgba(10,20,15,.45)}
 .past{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);padding-bottom:8px}
 .past select{font:inherit;font-size:14px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
 .past select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+tr.banned td{background:color-mix(in srgb,var(--minus) 7%,transparent);color:var(--muted)}
+tr.banned .pname{color:var(--muted)}
+.banmark{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--surface);background:var(--minus);border-radius:4px;padding:1px 6px}
 .empty{padding:24px;text-align:center;color:var(--muted)}
 footer{font-size:12px;color:var(--muted)}
 </style>
@@ -158,7 +161,7 @@ footer{font-size:12px;color:var(--muted)}
 <tbody id="tb"><tr><td colspan="9" class="empty">読み込み中…</td></tr></tbody>
 </table>
 </div>
-<footer>順位は合計PTの高い順。見出しの「対局数」「平均PT」「平均順位」「トップ率」「ラス回避率」を押すと並べ替えできる(順位列は合計PT順のまま)。プレイヤー名を押すと、同卓した相手ごとの相性表が開く。</footer>
+<footer>順位は合計PTの高い順。見出しの「対局数」「平均PT」「平均順位」「トップ率」「ラス回避率」を押すと並べ替えできる(順位列は合計PT順のまま)。プレイヤー名を押すと、同卓した相手ごとの相性表が開く。「BAN」は不正によりBANされたプレイヤーで、BANされた月以降と通算では成績はそのままに順位の対象外として最下位に表示する。</footer>
 
 </div>
 
@@ -180,9 +183,10 @@ footer{font-size:12px;color:var(--muted)}
 const $=id=>document.getElementById(id);
 const f=(v,s)=>(v>0?"+":v<0?"−":"")+Math.abs(v).toFixed(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-let D=[],key="pt",CUR=null,MONTHS=[],SEASONS=new Map(),TOTAL=[],AWARDS=new Map();
+let BANS=new Map(),D=[],key="pt",CUR=null,MONTHS=[],SEASONS=new Map(),TOTAL=[],AWARDS=new Map();
 
-function compute(games){
+function isBanned(id,view){const b=BANS.get(id);return !!b&&(view==="total"||view>=b)}
+function compute(games,view){
   const P=new Map();
   for(const [,seats] of games){
     seats.forEach(([id,name,pt],i)=>{
@@ -193,9 +197,11 @@ function compute(games){
         h[0]++;h[1]+=pt;h[2]+=(i<j);h[3]+=i+1; });
     });
   }
-  const L=[...P.values()].sort((a,b)=>b.pt-a.pt);
+  // BAN対象(BAN月以降・通算)は成績はそのまま、順位の対象外として最下位に置く
+  const L=[...P.values()].map(p=>(p.ban=isBanned(p.id,view),p)).sort((a,b)=>(a.ban-b.ban)||(b.pt-a.pt));
   const ix=new Map(L.map((p,i)=>[p.id,i]));
-  return L.map((p,i)=>{const n=p.n,r=p.r;return{i,id:p.id,rank:i+1,name:p.name,pt:Math.round(p.pt*10)/10,n,r,
+  let rk=0;
+  return L.map((p,i)=>{const n=p.n,r=p.r;return{i,id:p.id,ban:p.ban,rank:p.ban?null:++rk,name:p.name,pt:Math.round(p.pt*10)/10,n,r,
     avg:p.pt/n,ar:(r[0]+2*r[1]+3*r[2]+4*r[3])/n,top:r[0]/n,avoid:1-r[3]/n,
     vs:[...p.vs].map(([o,h])=>[ix.get(o),h[0],Math.round(h[1]*10)/10,h[2],h[3]])}});
 }
@@ -203,7 +209,7 @@ function ymLabel(ym){return `${ym.slice(0,4)}年${+ym.slice(4)}月`}
 function load(view){
   CUR=view;
   const games=view==="total"?TOTAL:SEASONS.get(view);
-  D=compute(games);
+  D=compute(games,view);
   const ds=games.map(g=>g[0].slice(0,10)).sort(), a=ds[0]||"", b=ds[ds.length-1]||"";
   const latest=MONTHS[0];
   $("ttl").textContent=view==="total"?"通算 PTランキング":`${ymLabel(view)} PTランキング`;
@@ -219,10 +225,10 @@ function load(view){
 function render(){
   const q=$("q").value.trim().toLowerCase();
   let L=D.filter(d=>!q||d.name.toLowerCase().includes(q));
-  L=[...L].sort((a,b)=>key==="ar"?a.ar-b.ar:b[key]-a[key]);
+  L=[...L].sort((a,b)=>(a.ban-b.ban)||(key==="ar"?a.ar-b.ar:b[key]-a[key]));
   if(!L.length){$("tb").innerHTML='<tr><td colspan="9" class="empty">該当するプレイヤーがいない</td></tr>';return}
-  $("tb").innerHTML=L.map(d=>`<tr class="${d.rank<=3?"top":""}">
-<td class="rank">${d.rank<=3?`<span class="medal m${d.rank}">${d.rank}</span>`:d.rank}</td>
+  $("tb").innerHTML=L.map(d=>`<tr class="${d.ban?"banned":d.rank<=3?"top":""}">
+<td class="rank">${d.ban?'<span class="banmark" title="不正によりBAN">BAN</span>':d.rank<=3?`<span class="medal m${d.rank}">${d.rank}</span>`:d.rank}</td>
 <td class="l name"><button class="pname" data-i="${d.i}" title="${esc(d.name)} の相性表を見る">${esc(d.name)}</button></td>
 <td class="pt ${d.pt>=0?"plus":"minus"}">${f(d.pt,1)}</td>
 <td class="num">${d.n}</td>
@@ -256,10 +262,10 @@ function openVs(i){
   $("dscope").textContent=CUR==="total"?"通算の成績・相性表":`${ymLabel(CUR)}の成績・相性表`;
   $("vsh").textContent=CUR==="total"?"相性表(通算)":`相性表(${ymLabel(CUR)})`;
   renderAwards(p.id);
-  $("dsub").innerHTML=`<span>総合 <b>${p.rank}位</b></span><span>合計PT <b class="${p.pt>=0?"plus":"minus"}">${f(p.pt,1)}</b></span><span>対局数 <b>${p.n}</b></span><span>対戦相手 <b>${p.vs.length}</b>人</span>`;
+  $("dsub").innerHTML=`<span>総合 <b>${p.ban?"BAN":p.rank+"位"}</b></span><span>合計PT <b class="${p.pt>=0?"plus":"minus"}">${f(p.pt,1)}</b></span><span>対局数 <b>${p.n}</b></span><span>対戦相手 <b>${p.vs.length}</b>人</span>`;
   const V=[...p.vs].sort((a,b)=>b[2]-a[2]||b[1]-a[1]);
   $("vtb").innerHTML=V.map(([o,g,pt,w,rs])=>{const q=D[o],wr=w/g*100;return `<tr>
-<td class="l"><button class="oppbtn" data-i="${o}">${esc(q.name)}</button><span class="orank">${q.rank}位</span></td>
+<td class="l"><button class="oppbtn" data-i="${o}">${esc(q.name)}</button><span class="orank">${q.ban?"BAN":q.rank+"位"}</span></td>
 <td class="num">${g}</td>
 <td class="pt ${pt>=0?"plus":"minus"}">${f(pt,1)}</td>
 <td class="num ${pt>=0?"plus":"minus"}">${f(pt/g,2)}</td>
@@ -350,18 +356,30 @@ async function loadSeason(ym){
   catch(err){console.warn(ym,err);BAD.push(`${ym}.csv(${err.message})`);return null}
 }
 const BAD=[];
+/* BANリスト: ban.csv(1列目=プレイヤー、2列目=BAN月 YYYYMM)。無ければBANなし */
+async function loadBans(){
+  try{
+    const r=await fetch(`ban.csv?t=${Date.now()}`,{cache:"no-store"}); if(!r.ok) return;
+    for(const row of parseCSV(decode(await r.arrayBuffer()).replace(/^\uFEFF/,""))){
+      const m=(row[0]||"").match(/\[(\d+)\]|^\s*(\d+)\s*$/), ym=(row[1]||"").trim();
+      if(!m||!isYM(ym)) continue;  // 見出し行や不正な行は読み飛ばす
+      const id=m[1]||m[2]; if(!BANS.has(id)||ym<BANS.get(id)) BANS.set(id,ym);
+    }
+  }catch(e){console.warn("ban.csv",e)}
+}
 function rebuild(){
   MONTHS=[...SEASONS.keys()].sort().reverse();
   if(!MONTHS.length) return false;
   const seen=new Set(); TOTAL=[];
   for(const ym of MONTHS) for(const g of SEASONS.get(ym)){ if(g[2]){if(seen.has(g[2]))continue;seen.add(g[2])} TOTAL.push(g) }
   AWARDS=new Map();
-  for(const ym of MONTHS) compute(SEASONS.get(ym)).slice(0,5).forEach(d=>{
+  for(const ym of MONTHS) compute(SEASONS.get(ym),ym).filter(d=>!d.ban).slice(0,5).forEach(d=>{
     if(!AWARDS.has(d.id)) AWARDS.set(d.id,[]); AWARDS.get(d.id).push([ym,d.rank]); });
   $("month").innerHTML='<option value="" disabled>選択</option>'+MONTHS.map(ym=>`<option value="${ym}">${ym.slice(0,4)}年${ym.slice(4)}月</option>`).join("");
   return true;
 }
 (async()=>{
+  await loadBans();
   const listed=await listByApi();
   const res=listed&&listed.length
     ? await Promise.all(listed.map(async ym=>[ym,await loadSeason(ym)]))
