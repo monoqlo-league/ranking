@@ -321,7 +321,7 @@ function rebuild(){
   if(!MONTHS.length) return false;
   const seen=new Set(); TOTAL=[];
   for(const ym of MONTHS) for(const g of SEASONS.get(ym)){ if(g[2]){if(seen.has(g[2]))continue;seen.add(g[2])} TOTAL.push(g) }
-  $("month").innerHTML='<option value="" disabled>選択</option>'+MONTHS.map(ym=>`<option value="${ym}">${ymLabel(ym)}</option>`).join("");
+  $("month").innerHTML='<option value="" disabled>選択</option>'+MONTHS.map(ym=>`<option value="${ym}">${ym.slice(0,4)}年${ym.slice(4)}月</option>`).join("");
   return true;
 }
 (async()=>{
