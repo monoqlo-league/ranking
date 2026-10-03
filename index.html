@@ -439,6 +439,8 @@ function parseCSV(text){
   if(cell!==""||row.length){row.push(cell);rows.push(row)}
   return rows.filter(r=>r.some(v=>v.trim()!==""));
 }
+/* 表示するプレイヤー名。牌譜履歴の書き出しによっては、名前の末尾に中身のない括弧「()」が付く。表示では取り除く(CSVは書き換えない) */
+const cleanName=n=>n.replace(/\s*[(（]\s*[)）]\s*$/,"")||n;
 function toGames(text){
   const rows=parseCSV(text.replace(/^﻿/,""));
   if(rows.length<2) throw new Error("CSVにデータ行がない。");
@@ -455,7 +457,7 @@ function toGames(text){
       const sc=col(`${i}位PT`)>=0?parseFloat(r[col(`${i}位PT`)]):NaN;          // 終了時の点棒(素点)
       const m=raw.match(/^\[[^\]]*\]\[(\d+)\](.*)$/);
       if(!raw||isNaN(pt)) throw new Error(`${k+2}行目の${i}位のデータが読めない。`);
-      seats.push([m?m[1]:raw,m?m[2]:raw,pt,isNaN(sc)?null:sc]);
+      seats.push([m?m[1]:raw,m?cleanName(m[2]):raw,pt,isNaN(sc)?null:sc]);
     }
     const lk=col("牌譜リンク");
     const en=col("終了時間");
