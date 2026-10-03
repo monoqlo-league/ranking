@@ -105,6 +105,20 @@ dialog::backdrop{background:rgba(10,20,15,.45)}
 .wbar{display:inline-block;width:56px;height:6px;border-radius:3px;background:color-mix(in srgb,var(--minus) 55%,transparent);overflow:hidden;vertical-align:middle;margin-right:8px}
 .wbar span{display:block;height:100%;background:var(--plus)}
 .dtbox{overflow-x:auto}
+/* 相性表の説明(?のボタンで開閉) */
+.vshrow{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.vshrow .vsh{margin-bottom:0!important}
+.helpbtn{all:unset;box-sizing:border-box;cursor:pointer;flex:none;display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;border:1.5px solid var(--muted);color:var(--muted);font-family:"IBM Plex Mono",monospace;font-size:13px;font-weight:600;line-height:1}
+.helpbtn:hover,.helpbtn[aria-expanded="true"]{border-color:var(--accent);color:var(--surface);background:var(--accent)}
+.helpbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.helpbox{margin:0 0 12px;padding:12px 14px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:13px;line-height:1.65}
+.helpbox p{margin:0}
+.helpbox h4{margin:12px 0 4px;font-size:13px;font-weight:700;color:var(--accent)}
+.helpbox dl{margin:0;display:grid;grid-template-columns:max-content minmax(0,1fr);gap:4px 14px}
+.helpbox dt{font-weight:700;white-space:nowrap}
+.helpbox dd{margin:0}
+.helpbox ul{margin:0;padding-left:1.3em;display:grid;gap:4px}
+@media (max-width:480px){.helpbox dl{grid-template-columns:minmax(0,1fr);gap:0}.helpbox dd{margin-bottom:6px}}
 /* 戦績の一覧。対局が多いプレイヤーは長くなるので、枠の中で縦にスクロールする */
 .glist{max-height:340px;overflow-y:auto;margin-bottom:20px;border:1px solid var(--line);border-radius:8px}
 .glist .vs th{position:sticky;top:0;background:var(--surface);z-index:1}
@@ -197,7 +211,28 @@ footer{font-size:12px;color:var(--muted)}
     <h3 class="vsh" id="reh">戦績</h3>
     <p class="dnote">このプレイヤーの対局を、新しい順に並べたもの。1位から4位まで、全員の名前・終了時の点棒・獲得PTを出す。このプレイヤーの欄には色を付けている。</p>
     <div class="dtbox glist"><table class="vs"><thead><tr><th class="l">日付</th><th class="l">1位</th><th class="l">2位</th><th class="l">3位</th><th class="l">4位</th></tr></thead><tbody id="gtb"></tbody></table></div>
-    <h3 class="vsh" id="vsh">相性表</h3>
+    <div class="vshrow"><h3 class="vsh" id="vsh">相性表</h3><button type="button" class="helpbtn" id="vhelp" aria-expanded="false" aria-controls="vhelpbox" aria-label="相性表の説明" title="相性表の説明">?</button></div>
+    <div class="helpbox" id="vhelpbox" hidden>
+      <p>相性表は、このプレイヤーが「誰と同卓したとき、どんな成績だったか」を、相手ごとにまとめた表。</p>
+      <h4>各列の意味</h4>
+      <dl>
+        <dt>対戦相手</dt><dd>同卓したことのある相手。名前の横の「○位」は、その相手の総合順位。押すとその人の成績に切り替わる。</dd>
+        <dt>同卓数</dt><dd>その相手と同じ卓で打った対局の数。</dd>
+        <dt>獲得PT</dt><dd>その相手と同卓した対局で、<b>このプレイヤーが</b>得たPTの合計。</dd>
+        <dt>平均PT</dt><dd>獲得PT ÷ 同卓数。同卓1局あたりの、このプレイヤーのPT。</dd>
+        <dt>先着率</dt><dd>同卓した対局のうち、このプレイヤーがその相手より上の順位で終えた割合。横の「21-3」は、先着した数と先着された数。</dd>
+      </dl>
+      <h4>並び順</h4>
+      <p>獲得PTの高い順。上にいる相手ほど「同卓すると成績が良い相手」で、下にいる相手ほど「同卓すると成績が悪い相手」になる。獲得PTが同じなら、同卓数の多い順。</p>
+      <h4>対象の範囲</h4>
+      <p>表示している範囲の対局だけで集計する。ある月を見ていればその月の分、通算を見ていれば全期間の分。</p>
+      <h4>読むときの注意</h4>
+      <ul>
+        <li><b>獲得PTは、相手から直接奪ったPTではない。</b>その卓には他に2人いるので、成績が良かった理由がその相手とは限らない。</li>
+        <li><b>同卓数が少ない相手は、たまたまの結果になりやすい。</b>1〜2局だけの相手は、上にも下にも極端に出る。</li>
+        <li><b>先着率のほうが、直接の勝ち負けに近い。</b>獲得PTが高くても先着率が低い相手は、「その人には負けているが、卓全体では稼げている」状態。</li>
+      </ul>
+    </div>
     <p class="dnote">同卓した対局だけで集計した、このプレイヤーの成績。獲得PTの高い順(相性の良い順)。先着率は相手より上の順位で終えた割合。</p>
     <div class="dtbox"><table class="vs"><thead><tr><th class="l">対戦相手</th><th>同卓数</th><th>獲得PT</th><th>平均PT</th><th class="l">先着率</th></tr></thead><tbody id="vtb"></tbody></table></div>
   </div>
@@ -305,6 +340,7 @@ function openVs(i){
   $("reh").textContent=CUR==="total"?"戦績(通算)":`戦績(${ymLabel(CUR)})`;
   renderAwards(p.id);
   renderGames(p);
+  setHelp(false);                                    // 説明は、開くたびに閉じた状態から始める
   $("dsub").innerHTML=`<span>総合 <b>${p.ban?"BAN":p.rank+"位"}</b></span><span>合計PT <b class="${p.pt>=0?"plus":"minus"}">${f(p.pt,1)}</b></span><span>対局数 <b>${p.n}</b></span><span>対戦相手 <b>${p.vs.length}</b>人</span>`;
   const V=[...p.vs].sort((a,b)=>b[2]-a[2]||b[1]-a[1]);
   $("vtb").innerHTML=V.map(([o,g,pt,w,rs])=>{const q=D[o],wr=w/g*100;return `<tr>
@@ -319,6 +355,9 @@ function openVs(i){
 $("tb").addEventListener("click",e=>{const b=e.target.closest(".pname");if(b)openVs(+b.dataset.i)});
 $("vtb").addEventListener("click",e=>{const b=e.target.closest(".oppbtn");if(b)openVs(+b.dataset.i)});
 $("gtb").addEventListener("click",e=>{const b=e.target.closest(".oppbtn");if(b)openVs(+b.dataset.i)});
+/* 相性表の説明の開閉 */
+function setHelp(open){$("vhelpbox").hidden=!open;$("vhelp").setAttribute("aria-expanded",open)}
+$("vhelp").addEventListener("click",()=>setHelp($("vhelpbox").hidden));
 $("dclose").addEventListener("click",()=>dlg.close());
 dlg.addEventListener("click",e=>{if(e.target===dlg)dlg.close()});
 
