@@ -109,12 +109,16 @@ dialog::backdrop{background:rgba(10,20,15,.45)}
 .glist{max-height:340px;overflow-y:auto;margin-bottom:20px;border:1px solid var(--line);border-radius:8px}
 .glist .vs th{position:sticky;top:0;background:var(--surface);z-index:1}
 .glist .vs td{padding-top:7px;padding-bottom:7px}
-.glist .gdate{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted)}
-.glist .gopp{white-space:normal;line-height:1.5}
-.glist .gopp .oppbtn{font-weight:500}
-.glist .gopp .sep{color:var(--muted);margin:0 5px}
-.glist .grank{font-family:"IBM Plex Mono",monospace;font-weight:600}
-.glist .gscore{font-family:"IBM Plex Mono",monospace;font-size:14px}
+.glist .vs{min-width:660px}
+.glist .gdate{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);vertical-align:top}
+.glist .gcell{white-space:normal;vertical-align:top;line-height:1.4;border-left:1px solid var(--line)}
+.glist .gcell .gn{display:block;font-size:14px;overflow-wrap:anywhere}
+.glist .gcell .oppbtn{font-weight:500}
+.glist .gcell .gv{display:flex;gap:8px;align-items:baseline;font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);white-space:nowrap}
+.glist .gcell .gv b{font-weight:600}
+.glist .gcell .gv b.plus{color:var(--plus)}.glist .gcell .gv b.minus{color:var(--minus)}
+.glist .gcell.me,.glist tbody tr:hover .gcell.me{background:var(--accent-soft)}
+.glist .gcell.me .gn{font-weight:900;color:var(--accent)}
 .views{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
 .tabs{display:flex;gap:4px}
 .tab{all:unset;cursor:pointer;padding:10px 14px;font-weight:700;font-size:14px;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-1px}
@@ -191,8 +195,8 @@ footer{font-size:12px;color:var(--muted)}
       <div id="awards"></div>
     </section>
     <h3 class="vsh" id="reh">戦績</h3>
-    <p class="dnote">このプレイヤーの対局を、新しい順に並べたもの。対戦相手は、その対局の着順の順。</p>
-    <div class="dtbox glist"><table class="vs"><thead><tr><th class="l">日付</th><th class="l">対戦相手</th><th>着順</th><th>終了時点棒</th><th>獲得PT</th></tr></thead><tbody id="gtb"></tbody></table></div>
+    <p class="dnote">このプレイヤーの対局を、新しい順に並べたもの。1位から4位まで、全員の名前・終了時の点棒・獲得PTを出す。このプレイヤーの欄には色を付けている。</p>
+    <div class="dtbox glist"><table class="vs"><thead><tr><th class="l">日付</th><th class="l">1位</th><th class="l">2位</th><th class="l">3位</th><th class="l">4位</th></tr></thead><tbody id="gtb"></tbody></table></div>
     <h3 class="vsh" id="vsh">相性表</h3>
     <p class="dnote">同卓した対局だけで集計した、このプレイヤーの成績。獲得PTの高い順(相性の良い順)。先着率は相手より上の順位で終えた割合。</p>
     <div class="dtbox"><table class="vs"><thead><tr><th class="l">対戦相手</th><th>同卓数</th><th>獲得PT</th><th>平均PT</th><th class="l">先着率</th></tr></thead><tbody id="vtb"></tbody></table></div>
@@ -279,23 +283,18 @@ function renderAwards(id){
     :'<p class="awnone">入賞記録はまだない。</p>';
 }
 /* 戦績の一覧。いま表示している範囲(月・通算)の対局から、このプレイヤーの対局を新しい順に並べる。
-   対戦相手は同卓した3人を、その対局の着順の順に出す。点棒は、対局記録の「N位PT」の列(終了時の点数) */
+   1位から4位まで、全員の名前・終了時の点棒・獲得PTを出し、このプレイヤーの欄に色を付ける。
+   点棒は、対局記録の「N位PT」の列(終了時の点数) */
 const pts=v=>(v<0?"−":"")+String(Math.abs(Math.round(v))).replace(/\B(?=(\d{3})+$)/g,",");
 function renderGames(p){
   const games=CUR==="total"?TOTAL:SEASONS.get(CUR), ix=new Map(D.map(d=>[d.id,d.i])), list=[];
-  for(const [start,seats] of games){
-    const k=seats.findIndex(s=>s[0]===p.id); if(k<0)continue;
-    list.push([start,k,seats]);
-  }
+  for(const [start,seats] of games) if(seats.some(s=>s[0]===p.id)) list.push([start,seats]);
   list.sort((a,b)=>a[0]<b[0]?1:a[0]>b[0]?-1:0);
-  $("gtb").innerHTML=list.length?list.map(([start,k,seats])=>{
-    const [, ,pt,score]=seats[k];
-    const opp=seats.map((s,j)=>j===k?"":`<button class="oppbtn" data-i="${ix.get(s[0])}">${esc(D[ix.get(s[0])].name)}</button>`).filter(Boolean).join('<span class="sep">/</span>');
-    return `<tr><td class="l gdate">${esc(start.slice(0,10).replace(/-/g,"/"))}</td>
-<td class="l gopp">${opp}</td>
-<td class="num grank">${k+1}位</td>
-<td class="num gscore">${score==null?"—":pts(score)}</td>
-<td class="pt ${pt>=0?"plus":"minus"}">${f(pt,1)}</td></tr>`}).join("")
+  $("gtb").innerHTML=list.length?list.map(([start,seats])=>
+    `<tr><td class="l gdate">${esc(start.slice(0,10).replace(/-/g,"/"))}</td>`+seats.map(([id, ,pt,score])=>{
+      const me=id===p.id,i=ix.get(id),name=esc(D[i].name);
+      return `<td class="l gcell${me?" me":""}"><span class="gn">${me?name:`<button class="oppbtn" data-i="${i}">${name}</button>`}</span>`+
+        `<span class="gv"><span class="gscore">${score==null?"—":pts(score)}</span><b class="${pt>=0?"plus":"minus"}">${f(pt,1)}</b></span></td>`}).join("")+"</tr>").join("")
     :'<tr><td colspan="5" class="empty">対局がない</td></tr>';
 }
 function openVs(i){
