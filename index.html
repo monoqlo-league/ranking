@@ -40,7 +40,9 @@ h1{font-size:clamp(26px,5vw,36px);font-weight:900;line-height:1.25;margin:0;text
 .meta b{font-family:"IBM Plex Mono",monospace;font-weight:500;color:var(--ink)}
 /* 終わった月の見出しに重ねる「完了」の印 */
 h1 .tt{position:relative;display:inline-block;max-width:100%}
-h1 .stamp{position:absolute;right:-18px;top:50%;width:clamp(88px,16vw,116px);height:auto;transform:translateY(-50%) rotate(-12deg);opacity:.9;pointer-events:none}
+/* 印の下端を見出しの下端にそろえ、上へ伸ばす。見出しの下の行(集計期間・対局数・参加者)には重ねない */
+h1 .stamp{position:absolute;right:-18px;bottom:9px;width:clamp(64px,12vw,84px);height:auto;transform:rotate(-12deg);opacity:.9;pointer-events:none}
+@media (max-width:600px){h1 .stamp{right:0}}        /* 狭い画面では、右のパンダにも重ねない */
 .tools{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
 .search{flex:1 1 220px;max-width:320px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit}
 .search:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
@@ -270,10 +272,10 @@ function compute(games,view){
     vs:[...p.vs].map(([o,h])=>[ix.get(o),h[0],Math.round(h[1]*10)/10,h[2],h[3]])}});
 }
 function ymLabel(ym){return `${ym.slice(0,4)}年${+ym.slice(4)}月`}
-/* その月が終わったか。今日が、その月の最終日以降なら終わったとする(最終日の当日を含む) */
+/* その月が終わったか。翌月の1日を迎えたら、終わったとする(今日の年月が、その月より後) */
 function monthDone(ym){
-  const y=+ym.slice(0,4),m=+ym.slice(4),last=new Date(y,m,0).getDate(),n=new Date();
-  return n.getFullYear()*10000+(n.getMonth()+1)*100+n.getDate()>=y*10000+m*100+last;
+  const n=new Date();
+  return n.getFullYear()*100+(n.getMonth()+1)>+ym;
 }
 /* ---------- 最終更新日時 ----------
    データ用リポジトリで、そのCSVが最後に更新された日時(GitHubの記録)を出す。通算は、リポジトリ全体の最後の更新。
