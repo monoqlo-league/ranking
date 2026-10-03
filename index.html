@@ -38,6 +38,9 @@ header{display:grid;gap:6px}
 h1{font-size:clamp(26px,5vw,36px);font-weight:900;line-height:1.25;margin:0;text-wrap:balance}
 .meta{color:var(--muted);font-size:13px;display:flex;flex-wrap:wrap;gap:4px 18px}
 .meta b{font-family:"IBM Plex Mono",monospace;font-weight:500;color:var(--ink)}
+/* 終わった月の見出しに重ねる「完了」の印 */
+h1 .tt{position:relative;display:inline-block;max-width:100%}
+h1 .stamp{position:absolute;right:-18px;top:50%;width:clamp(88px,16vw,116px);height:auto;transform:translateY(-50%) rotate(-12deg);opacity:.9;pointer-events:none}
 .tools{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
 .search{flex:1 1 220px;max-width:320px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit}
 .search:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
@@ -165,6 +168,7 @@ footer{font-size:12px;color:var(--muted)}
   <div class="eyebrow">MONOQLO麻雀部</div>
   <h1 id="ttl">PTランキング</h1>
   <div class="meta" id="meta"><span>読み込み中…</span></div>
+  <div class="meta" id="meta2" hidden></div>
   </div>
   </div>
 </header>
@@ -266,13 +270,51 @@ function compute(games,view){
     vs:[...p.vs].map(([o,h])=>[ix.get(o),h[0],Math.round(h[1]*10)/10,h[2],h[3]])}});
 }
 function ymLabel(ym){return `${ym.slice(0,4)}年${+ym.slice(4)}月`}
+/* その月が終わったか。今日が、その月の最終日以降なら終わったとする(最終日の当日を含む) */
+function monthDone(ym){
+  const y=+ym.slice(0,4),m=+ym.slice(4),last=new Date(y,m,0).getDate(),n=new Date();
+  return n.getFullYear()*10000+(n.getMonth()+1)*100+n.getDate()>=y*10000+m*100+last;
+}
+/* ---------- 最終更新日時 ----------
+   データ用リポジトリで、そのCSVが最後に更新された日時(GitHubの記録)を出す。通算は、リポジトリ全体の最後の更新。
+   GitHubのAPIが使えないとき(回数制限・手元での確認など)は、データに入っている最後の対局の終了時刻を「最終対局」として出す。 */
+const p2=v=>String(v).padStart(2,"0");
+const fmtDT=d=>`${d.getFullYear()}/${p2(d.getMonth()+1)}/${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
+const UPD=new Map();                                  // CSVの名前 → 更新日時を取る約束(同じものを何度も取りに行かない)
+function updatedAt(view){
+  if(!REPO_OWNER) return Promise.resolve(null);
+  const path=view==="total"?"":`${view}.csv`;
+  if(!UPD.has(path)) UPD.set(path,(async()=>{
+    const key=`monoqlo-upd:${path}`;
+    try{const c=JSON.parse(sessionStorage.getItem(key)||"null"); if(c&&c.t&&Date.now()-c.at<5*60e3) return new Date(c.t)}catch(e){}   // 5分は覚えておく
+    try{
+      const r=await fetch(`https://api.github.com/repos/${REPO_OWNER}/${DATA_REPO}/commits?per_page=1${path?`&path=${encodeURIComponent(path)}`:""}`);
+      if(!r.ok) return null;
+      const j=await r.json(),t=j[0]&&j[0].commit&&j[0].commit.committer&&j[0].commit.committer.date||null;
+      if(!t||isNaN(new Date(t))) return null;
+      try{sessionStorage.setItem(key,JSON.stringify({t,at:Date.now()}))}catch(e){}
+      return new Date(t);
+    }catch(e){return null}
+  })());
+  return UPD.get(path);
+}
+function showUpdated(view,games){
+  const el=$("meta2");
+  const lastEnd=games.reduce((x,g)=>{const t=g[3]||g[0];return t>x?t:x},"");                 // 最後の対局の終了時刻
+  const fallback=lastEnd?`<span>最終対局 <b>${esc(lastEnd.slice(0,16).replace(/-/g,"/"))}</b></span>`:"";
+  el.innerHTML=fallback;el.hidden=!fallback;
+  updatedAt(view).then(d=>{ if(d&&CUR===view){el.innerHTML=`<span>最終更新 <b>${fmtDT(d)}</b></span>`;el.hidden=false} });
+}
 function load(view){
   CUR=view;
   const games=view==="total"?TOTAL:SEASONS.get(view);
   D=compute(games,view);
   const ds=games.map(g=>g[0].slice(0,10)).sort(), a=ds[0]||"", b=ds[ds.length-1]||"";
   const latest=MONTHS[0];
-  $("ttl").textContent=view==="total"?"通算 PTランキング":`${ymLabel(view)} PTランキング`;
+  /* 終わった月の見出しには「完了」の印を重ねる(通算には付けない) */
+  $("ttl").innerHTML=`<span class="tt">${view==="total"?"通算 PTランキング":`${ymLabel(view)} PTランキング`}`+
+    (view!=="total"&&monthDone(view)?`<img class="stamp" src="${encodeURIComponent("完了")}.png" alt="完了" width="180" height="180">`:"")+`</span>`;
+  showUpdated(view,games);
   $("meta").innerHTML=(view==="total"?`<span>シーズン <b>${MONTHS.length}</b>(${ymLabel(MONTHS[MONTHS.length-1])}〜${ymLabel(latest)})</span>`:"")+
     `<span>集計期間 <b>${a.replace(/-/g,"/")} – ${b.replace(/-/g,"/")}</b></span><span>対局数 <b>${games.length}</b></span><span>参加者 <b>${D.length}</b>人</span>`;
   $("tabMonth").setAttribute("aria-selected",view===latest);
@@ -308,13 +350,14 @@ const dlg=$("dlg");
 function curYM(){const d=new Date();return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}`}
 function renderAwards(id){
   const list=(AWARDS.get(id)||[]).slice().sort((a,b)=>b[0].localeCompare(a[0]));
-  const now=curYM(), fixed=list.filter(([ym])=>ym!==now), cnt=[0,0,0,0,0];
+  /* 終わっていない月(monthDone でない月)の順位は集計中として、回数に含めない */
+  const now=curYM(), fixed=list.filter(([ym])=>monthDone(ym)), cnt=[0,0,0,0,0];
   fixed.forEach(([,r])=>cnt[r-1]++);
-  const prov=list.find(([ym])=>ym===now);
+  const prov=list.find(([ym])=>!monthDone(ym));
   $("awards").innerHTML=list.length?
     `<div class="awc">${cnt.map((c,k)=>`<div class="${c?"on"+(k+1):""}"><b>${c}</b>${k+1}位</div>`).join("")}</div>
-     <div class="awl">${list.map(([ym,r])=>`<span class="r${r}${ym===now?" prov":""}">${ym.slice(0,4)}年${ym.slice(4)}月 ${r}位${ym===now?"(集計中)":""}</span>`).join("")}</div>`+
-     (prov?`<p class="awnone">今月(${ymLabel(now)})の順位は集計中のため、回数には含めていない。</p>`:"")
+     <div class="awl">${list.map(([ym,r])=>`<span class="r${r}${monthDone(ym)?"":" prov"}">${ym.slice(0,4)}年${ym.slice(4)}月 ${r}位${monthDone(ym)?"":"(集計中)"}</span>`).join("")}</div>`+
+     (prov?`<p class="awnone">${prov[0]===now?`今月(${ymLabel(now)})`:ymLabel(prov[0])}の順位は集計中のため、回数には含めていない。</p>`:"")
     :'<p class="awnone">入賞記録はまだない。</p>';
 }
 /* 戦績の一覧。いま表示している範囲(月・通算)の対局から、このプレイヤーの対局を新しい順に並べる。
@@ -393,7 +436,8 @@ function toGames(text){
       seats.push([m?m[1]:raw,m?m[2]:raw,pt,isNaN(sc)?null:sc]);
     }
     const lk=col("牌譜リンク");
-    games.push([(r[col("開始時間")]||"").trim(),seats,lk>=0?(r[lk]||"").trim():""]);
+    const en=col("終了時間");
+    games.push([(r[col("開始時間")]||"").trim(),seats,lk>=0?(r[lk]||"").trim():"",en>=0?(r[en]||"").trim():""]);
   });
   if(!games.length) throw new Error("集計できる対局がない。");
   return {games,skipped};
