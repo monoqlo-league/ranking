@@ -38,6 +38,7 @@ header{display:grid;gap:6px}
 h1{font-size:clamp(26px,5vw,36px);font-weight:900;line-height:1.25;margin:0;text-wrap:balance}
 .meta{color:var(--muted);font-size:13px;display:flex;flex-wrap:wrap;gap:4px 18px}
 .meta b{font-family:"IBM Plex Mono",monospace;font-weight:500;color:var(--ink)}
+.crown{font-weight:400;margin:0 2px}
 /* 終わった月の見出しに重ねる「完了」の印 */
 h1 .tt{position:relative;display:inline-block;max-width:100%}
 /* 印の下端を見出しの下端にそろえ、上へ伸ばす。見出しの下の行(集計期間・対局数・参加者)には重ねない */
@@ -248,7 +249,7 @@ footer{font-size:12px;color:var(--muted)}
 const $=id=>document.getElementById(id);
 const f=(v,s)=>(v>0?"+":v<0?"−":"")+Math.abs(v).toFixed(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-let BANS=new Map(),D=[],key="pt",CUR=null,MONTHS=[],SEASONS=new Map(),TOTAL=[],AWARDS=new Map();
+let BANS=new Map(),D=[],key="pt",CUR=null,MONTHS=[],SEASONS=new Map(),TOTAL=[],AWARDS=new Map(),CHAMP=new Map();
 
 function isBanned(id,view){const b=BANS.get(id);return !!b&&(view==="total"||view>=b)}
 function compute(games,view){
@@ -325,14 +326,21 @@ function load(view){
   if(dlg.open)dlg.close();
   render();
 }
+/* 前回チャンピオン。月のランキングでは、1つ前のシーズン(データがある直前の月)の1位に 👑 を付ける。通算には付けない */
+function prevChampion(view){
+  if(view==="total")return null;
+  const prev=MONTHS[MONTHS.indexOf(view)+1];         // MONTHS は新しい順
+  return prev&&CHAMP.has(prev)?{ym:prev,id:CHAMP.get(prev)}:null;
+}
 function render(){
   const q=$("q").value.trim().toLowerCase();
+  const champ=prevChampion(CUR),crown=d=>champ&&!d.ban&&d.id===champ.id?`<span class="crown" title="前回(${ymLabel(champ.ym)})のチャンピオン">👑</span>`:"";
   let L=D.filter(d=>!q||d.name.toLowerCase().includes(q));
   L=[...L].sort((a,b)=>(a.ban-b.ban)||(key==="ar"?a.ar-b.ar:b[key]-a[key]));
   if(!L.length){$("tb").innerHTML='<tr><td colspan="10" class="empty">該当するプレイヤーがいない</td></tr>';return}
   $("tb").innerHTML=L.map(d=>`<tr class="${d.ban?"banned":d.rank<=3?"top":""}">
 <td class="rank">${d.ban?'<span class="banmark" title="不正によりBAN">BAN</span>':d.rank<=3?`<span class="medal m${d.rank}">${d.rank}</span>`:d.rank}</td>
-<td class="l name"><button class="pname" data-i="${d.i}" title="${esc(d.name)} の相性表を見る">${esc(d.name)}</button></td>
+<td class="l name"><button class="pname" data-i="${d.i}" title="${esc(d.name)} の相性表を見る">${crown(d)}${esc(d.name)}${crown(d)}</button></td>
 <td class="pt ${d.pt>=0?"plus":"minus"}">${f(d.pt,1)}</td>
 <td class="num">${d.n}</td>
 <td class="num ${d.avg>=0?"plus":"minus"}">${f(d.avg,2)}</td>
@@ -524,8 +532,9 @@ function rebuild(){
   if(!MONTHS.length) return false;
   const seen=new Set(); TOTAL=[];
   for(const ym of MONTHS) for(const g of SEASONS.get(ym)){ if(g[2]){if(seen.has(g[2]))continue;seen.add(g[2])} TOTAL.push(g) }
-  AWARDS=new Map();
+  AWARDS=new Map();CHAMP=new Map();                  // CHAMP: 月 → その月の1位のプレイヤーID
   for(const ym of MONTHS) compute(SEASONS.get(ym),ym).filter(d=>!d.ban).slice(0,5).forEach(d=>{
+    if(d.rank===1) CHAMP.set(ym,d.id);
     if(!AWARDS.has(d.id)) AWARDS.set(d.id,[]); AWARDS.get(d.id).push([ym,d.rank]); });
   $("month").innerHTML='<option value="" disabled>選択</option>'+MONTHS.map(ym=>`<option value="${ym}">${ym.slice(0,4)}年${ym.slice(4)}月</option>`).join("");
   return true;
