@@ -228,7 +228,7 @@ footer{font-size:12px;color:var(--muted)}
         <dt>先着率</dt><dd>同卓した対局のうち、このプレイヤーがその相手より上の順位で終えた割合。横の「21-3」は、先着した数と先着された数。</dd>
       </dl>
       <h4>並び順</h4>
-      <p>獲得PTの高い順。上にいる相手ほど「同卓すると成績が良い相手」で、下にいる相手ほど「同卓すると成績が悪い相手」になる。獲得PTが同じなら、同卓数の多い順。</p>
+      <p>最初は獲得PTの高い順。上にいる相手ほど「同卓すると成績が良い相手」で、下にいる相手ほど「同卓すると成績が悪い相手」になる。見出しの「同卓数」「獲得PT」を押すと、その列の大きい順に並べ替えられる。同じ見出しをもう一度押すと、小さい順に切り替わる。</p>
       <h4>対象の範囲</h4>
       <p>表示している範囲の対局だけで集計する。ある月を見ていればその月の分、通算を見ていれば全期間の分。</p>
       <h4>読むときの注意</h4>
@@ -238,8 +238,8 @@ footer{font-size:12px;color:var(--muted)}
         <li><b>先着率のほうが、直接の勝ち負けに近い。</b>獲得PTが高くても先着率が低い相手は、「その人には負けているが、卓全体では稼げている」状態。</li>
       </ul>
     </div>
-    <p class="dnote">同卓した対局だけで集計した、このプレイヤーの成績。獲得PTの高い順(相性の良い順)。先着率は相手より上の順位で終えた割合。</p>
-    <div class="dtbox"><table class="vs"><thead><tr><th class="l">対戦相手</th><th>同卓数</th><th>獲得PT</th><th>平均PT</th><th class="l">先着率</th></tr></thead><tbody id="vtb"></tbody></table></div>
+    <p class="dnote">同卓した対局だけで集計した、このプレイヤーの成績。最初は獲得PTの高い順(相性の良い順)。見出しの「同卓数」「獲得PT」を押すと並べ替えられる。先着率は相手より上の順位で終えた割合。</p>
+    <div class="dtbox"><table class="vs"><thead id="vth"><tr><th class="l">対戦相手</th><th><button type="button" data-vk="g">同卓数<span class="arrow">▼</span></button></th><th><button type="button" data-vk="pt" class="on">獲得PT<span class="arrow">▼</span></button></th><th>平均PT</th><th class="l">先着率</th></tr></thead><tbody id="vtb"></tbody></table></div>
   </div>
 </dialog>
 <svg class="bamboo" viewBox="-44 0 264 320" aria-hidden="true"><rect x="30" y="262" width="14" height="55" rx="5.4" fill="var(--stalk)"/><rect x="29" y="316" width="16" height="4" rx="2" fill="var(--node)"/><rect x="30" y="204" width="14" height="55" rx="5.4" fill="var(--stalk)"/><rect x="29" y="258" width="16" height="4" rx="2" fill="var(--node)"/><rect x="30" y="146" width="14" height="55" rx="5.4" fill="var(--stalk)"/><rect x="29" y="200" width="16" height="4" rx="2" fill="var(--node)"/><rect x="30" y="88" width="14" height="55" rx="5.4" fill="var(--stalk)"/><rect x="29" y="142" width="16" height="4" rx="2" fill="var(--node)"/><rect x="30" y="40" width="14" height="45" rx="5.4" fill="var(--stalk)"/><rect x="29" y="84" width="16" height="4" rx="2" fill="var(--node)"/><rect x="78" y="262" width="11" height="55" rx="4.2" fill="var(--stalk)"/><rect x="77" y="316" width="13" height="4" rx="2" fill="var(--node)"/><rect x="78" y="204" width="11" height="55" rx="4.2" fill="var(--stalk)"/><rect x="77" y="258" width="13" height="4" rx="2" fill="var(--node)"/><rect x="78" y="146" width="11" height="55" rx="4.2" fill="var(--stalk)"/><rect x="77" y="200" width="13" height="4" rx="2" fill="var(--node)"/><rect x="78" y="110" width="11" height="33" rx="4.2" fill="var(--stalk)"/><rect x="77" y="142" width="13" height="4" rx="2" fill="var(--node)"/><rect x="118" y="262" width="9" height="55" rx="3.5" fill="var(--stalk)"/><rect x="117" y="316" width="11" height="4" rx="2" fill="var(--node)"/><rect x="118" y="204" width="9" height="55" rx="3.5" fill="var(--stalk)"/><rect x="117" y="258" width="11" height="4" rx="2" fill="var(--node)"/><rect x="118" y="170" width="9" height="31" rx="3.5" fill="var(--stalk)"/><rect x="117" y="200" width="11" height="4" rx="2" fill="var(--node)"/><path d="M0 0 Q20.7 -9 46 0 Q20.7 9 0 0Z" transform="translate(44 70) rotate(-25)" fill="var(--leaf)"/><path d="M0 0 Q18.0 -9 40 0 Q18.0 9 0 0Z" transform="translate(44 72) rotate(-60)" fill="var(--leaf)"/><path d="M0 0 Q19.8 -9 44 0 Q19.8 9 0 0Z" transform="translate(30 100) rotate(200)" fill="var(--leaf)"/><path d="M0 0 Q17.1 -9 38 0 Q17.1 9 0 0Z" transform="translate(30 98) rotate(160)" fill="var(--leaf)"/><path d="M0 0 Q18.900000000000002 -9 42 0 Q18.900000000000002 9 0 0Z" transform="translate(89 140) rotate(-20)" fill="var(--leaf)"/><path d="M0 0 Q16.2 -9 36 0 Q16.2 9 0 0Z" transform="translate(89 142) rotate(-55)" fill="var(--leaf)"/><path d="M0 0 Q18.0 -9 40 0 Q18.0 9 0 0Z" transform="translate(78 175) rotate(195)" fill="var(--leaf)"/><path d="M0 0 Q17.1 -9 38 0 Q17.1 9 0 0Z" transform="translate(127 196) rotate(-15)" fill="var(--leaf)"/><path d="M0 0 Q14.4 -9 32 0 Q14.4 9 0 0Z" transform="translate(127 198) rotate(-50)" fill="var(--leaf)"/><path d="M0 0 Q15.3 -9 34 0 Q15.3 9 0 0Z" transform="translate(118 230) rotate(190)" fill="var(--leaf)"/><path d="M0 0 Q18.0 -8 40 0 Q18.0 8 0 0Z" transform="translate(44 160) rotate(-10)" fill="var(--leaf)"/><path d="M0 0 Q16.2 -7 36 0 Q16.2 7 0 0Z" transform="translate(30 200) rotate(185)" fill="var(--leaf)"/></svg>
@@ -343,7 +343,7 @@ function render(){
 <td><div class="bar">${d.r.map(c=>`<span style="width:${c/d.n*100}%"></span>`).join("")}</div><div class="counts">${d.r.join(" / ")}</div></td>
 </tr>`).join("");
 }
-document.querySelectorAll("th button").forEach(b=>b.addEventListener("click",()=>{key=b.dataset.k;document.querySelectorAll("th button").forEach(x=>x.classList.toggle("on",x===b));render()}));
+document.querySelectorAll("th button[data-k]").forEach(b=>b.addEventListener("click",()=>{key=b.dataset.k;document.querySelectorAll("th button[data-k]").forEach(x=>x.classList.toggle("on",x===b));render()}));
 $("q").addEventListener("input",render);
 
 /* 相性表 */
@@ -376,6 +376,22 @@ function renderGames(p){
         `<span class="gv"><span class="gscore">${score==null?"—":pts(score)}</span><b class="${pt>=0?"plus":"minus"}">${f(pt,1)}</b></span></td>`}).join("")+"</tr>").join("")
     :'<tr><td colspan="5" class="empty">対局がない</td></tr>';
 }
+/* 相性表。並べ替えは「同卓数」「獲得PT」。最初は獲得PTの大きい順。同じ見出しをもう一度押すと、小さい順に切り替わる。
+   値が同じ相手どうしは、もう一方の列の大きい順 */
+let VSP=null,VSK="pt",VSDIR=-1;                       // 開いているプレイヤー、並べ替えの列(g=同卓数/pt=獲得PT)、向き(-1=大きい順)
+function renderVs(){
+  const p=D[VSP], c=VSK==="g"?1:2, o=VSK==="g"?2:1;
+  const V=[...p.vs].sort((a,b)=>VSDIR*(a[c]-b[c])||b[o]-a[o]);
+  $("vth").querySelectorAll("button[data-vk]").forEach(b=>{const on=b.dataset.vk===VSK;
+    b.classList.toggle("on",on);b.querySelector(".arrow").textContent=on&&VSDIR>0?"▲":"▼";
+    b.closest("th").setAttribute("aria-sort",on?(VSDIR>0?"ascending":"descending"):"none")});
+  $("vtb").innerHTML=V.map(([o,g,pt,w,rs])=>{const q=D[o],wr=w/g*100;return `<tr>
+<td class="l"><button class="oppbtn" data-i="${o}">${esc(q.name)}</button><span class="orank">${q.ban?"BAN":q.rank+"位"}</span></td>
+<td class="num">${g}</td>
+<td class="pt ${pt>=0?"plus":"minus"}">${f(pt,1)}</td>
+<td class="num ${pt>=0?"plus":"minus"}">${f(pt/g,2)}</td>
+<td class="l num"><span class="wbar"><span style="width:${wr}%"></span></span>${wr.toFixed(0)}%<span class="orank">${w}-${g-w}</span></td></tr>`}).join("");
+}
 function openVs(i){
   const p=D[i];
   $("dname").textContent=p.name;
@@ -386,18 +402,15 @@ function openVs(i){
   renderGames(p);
   setHelp(false);                                    // 説明は、開くたびに閉じた状態から始める
   $("dsub").innerHTML=`<span>総合 <b>${p.ban?"BAN":p.rank+"位"}</b></span><span>合計PT <b class="${p.pt>=0?"plus":"minus"}">${f(p.pt,1)}</b></span><span>対局数 <b>${p.n}</b></span><span>対戦相手 <b>${p.vs.length}</b>人</span>`;
-  const V=[...p.vs].sort((a,b)=>b[2]-a[2]||b[1]-a[1]);
-  $("vtb").innerHTML=V.map(([o,g,pt,w,rs])=>{const q=D[o],wr=w/g*100;return `<tr>
-<td class="l"><button class="oppbtn" data-i="${o}">${esc(q.name)}</button><span class="orank">${q.ban?"BAN":q.rank+"位"}</span></td>
-<td class="num">${g}</td>
-<td class="pt ${pt>=0?"plus":"minus"}">${f(pt,1)}</td>
-<td class="num ${pt>=0?"plus":"minus"}">${f(pt/g,2)}</td>
-<td class="l num"><span class="wbar"><span style="width:${wr}%"></span></span>${wr.toFixed(0)}%<span class="orank">${w}-${g-w}</span></td></tr>`}).join("");
+  VSP=i;renderVs();
   if(!dlg.open) dlg.showModal();
   $("dclose").focus({preventScroll:true}); dlg.scrollTop=0;
 }
 $("tb").addEventListener("click",e=>{const b=e.target.closest(".pname");if(b)openVs(+b.dataset.i)});
 $("vtb").addEventListener("click",e=>{const b=e.target.closest(".oppbtn");if(b)openVs(+b.dataset.i)});
+$("vth").addEventListener("click",e=>{const b=e.target.closest("button[data-vk]");if(!b||VSP==null)return;
+  if(b.dataset.vk===VSK)VSDIR=-VSDIR; else{VSK=b.dataset.vk;VSDIR=-1}
+  renderVs()});
 $("gtb").addEventListener("click",e=>{const b=e.target.closest(".oppbtn");if(b)openVs(+b.dataset.i)});
 /* 相性表の説明の開閉 */
 function setHelp(open){$("vhelpbox").hidden=!open;$("vhelp").setAttribute("aria-expanded",open)}
