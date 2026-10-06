@@ -111,6 +111,49 @@ dialog::backdrop{background:rgba(10,20,15,.45)}
 .wbar{display:inline-block;width:56px;height:6px;border-radius:3px;background:color-mix(in srgb,var(--minus) 55%,transparent);overflow:hidden;vertical-align:middle;margin-right:8px}
 .wbar span{display:block;height:100%;background:var(--plus)}
 .dtbox{overflow-x:auto}
+/* 成績ウィンドウ: 詳細成績(和了率など)。チーム戦ランキングと同じ見た目 */
+.stgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px}
+.stgrid:empty{display:none}
+.st{all:unset;box-sizing:border-box;display:block;cursor:pointer;border:1px solid var(--line);border-radius:10px;padding:9px 12px 8px;background:var(--bg);min-width:0}
+.st>span{display:block}
+.st:hover{border-color:var(--accent)}
+.st:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.st[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.st[aria-pressed="true"] .k{color:var(--accent)}
+.st .k{font-size:12px;color:var(--muted);font-weight:700}
+.st .v{font-family:"IBM Plex Mono",monospace;font-size:20px;font-weight:600;line-height:1.35;color:var(--ink)}
+.st .c{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 項目のランキング */
+.strank{border:1px solid var(--line);border-radius:10px;padding:10px 12px 6px;min-width:0}
+.vs.srt{min-width:0;width:100%}
+.srt td.v small{display:none}
+@media (max-width:520px){
+  .strank{padding:8px 6px 4px}
+  .srt td,.srt th{padding:6px 5px}
+  .srt td.l,.srt td.l small,.srt td.l .pname{white-space:normal;overflow-wrap:anywhere}
+  .srt td.rank,.srt th:first-child{width:30px;padding-left:2px;padding-right:2px}
+  .srt .c{display:none}                         /* 件数の列は出さず、値の下に小さく出す */
+  .srt td.v small{display:block;font-size:10.5px;font-weight:400;color:var(--muted);white-space:nowrap}
+}
+.srh{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin-bottom:4px}
+.srh b{font-size:14px}
+.srh span{font-size:12px;color:var(--muted)}
+.srclose{all:unset;cursor:pointer;margin-left:auto;font-size:12px;font-weight:700;color:var(--muted);border-bottom:1px dashed var(--muted)}
+.srclose:hover{color:var(--accent);border-bottom-color:var(--accent)}
+.srclose:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+.srt td.l small{display:block;font-size:11px;color:var(--muted);font-weight:400}
+.srt td.v{font-weight:600}
+.srt td.c{font-size:12px;color:var(--muted);white-space:nowrap}
+.srt tr.me td{background:var(--accent-soft)}
+.srt tr.me td.rank,.srt tr.me .pname{color:var(--accent)}
+.srt td,.srt th{padding:6px 8px}
+.stnote{margin:0;font-size:12px;line-height:1.7;color:var(--muted)}
+/* 詳細成績: 項目が増えたので、タイルを少し詰める。長い項目名は折り返す */
+.st .k{line-height:1.35}
+.st.list .v{font-family:inherit;font-size:15px;font-weight:700;color:var(--accent);line-height:1.8}
+.srt.yk td.l{font-weight:700}
+.srt .pname{max-width:none;border-bottom:0;font-weight:700}
+.srt td.rank .banmark{font-size:10px;padding:1px 4px}
 /* 相性表の説明(?のボタンで開閉) */
 .vshrow{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .vshrow .vsh{margin-bottom:0!important}
@@ -204,7 +247,7 @@ footer{font-size:12px;color:var(--muted)}
 <tbody id="tb"><tr><td colspan="10" class="empty">読み込み中…</td></tr></tbody>
 </table>
 </div>
-<footer>順位は合計PTの高い順。見出しの「対局数」「平均PT」「平均順位」「トップ率」「連対率」「ラス回避率」を押すと並べ替えできる(順位列は合計PT順のまま)。プレイヤー名を押すと、同卓した相手ごとの相性表が開く。「BAN」は不正によりBANされたプレイヤーで、BANされた月以降と通算では成績はそのままに順位の対象外として最下位に表示する。</footer>
+<footer>順位は合計PTの高い順。見出しの「対局数」「平均PT」「平均順位」「トップ率」「連対率」「ラス回避率」を押すと並べ替えできる(順位列は合計PT順のまま)。プレイヤー名を押すと、成績(入賞記録・詳細成績・戦績・相性表)が開く。詳細成績は、牌譜の集計がある月だけに出る。「BAN」は不正によりBANされたプレイヤーで、BANされた月以降と通算では成績はそのままに順位の対象外として最下位に表示する。</footer>
 
 </div>
 
@@ -214,6 +257,12 @@ footer{font-size:12px;color:var(--muted)}
     <section class="awards" aria-labelledby="awh">
       <h3 id="awh">入賞記録 <span>月間ランキング1〜5位</span></h3>
       <div id="awards"></div>
+    </section>
+    <section class="awards" id="secStat" aria-labelledby="sth" hidden>
+      <h3 id="sth">詳細成績 <span id="stsub"></span></h3>
+      <div class="stgrid" id="stgrid"></div>
+      <div class="strank" id="strank" hidden></div>
+      <p class="stnote" id="stnote"></p>
     </section>
     <h3 class="vsh" id="reh">戦績</h3>
     <div class="dtbox glist"><table class="vs"><thead><tr><th class="l">日付</th><th class="l">1位</th><th class="l">2位</th><th class="l">3位</th><th class="l">4位</th></tr></thead><tbody id="gtb"></tbody></table></div>
@@ -317,6 +366,7 @@ function load(view){
   $("ttl").innerHTML=`<span class="tt">${view==="total"?"通算 PTランキング":`${ymLabel(view)} PTランキング`}`+
     (view!=="total"&&monthDone(view)?`<img class="stamp" src="${encodeURIComponent("完了")}.png" alt="完了" width="180" height="180">`:"")+`</span>`;
   showUpdated(view,games);
+  summaryOf(view);                                   // その月の詳細成績(牌譜の集計)を読み始める
   $("meta").innerHTML=(view==="total"?`<span>シーズン <b>${MONTHS.length}</b>(${ymLabel(MONTHS[MONTHS.length-1])}〜${ymLabel(latest)})</span>`:"")+
     `<span>集計期間 <b>${a.replace(/-/g,"/")} – ${b.replace(/-/g,"/")}</b></span><span>対局数 <b>${games.length}</b></span><span>参加者 <b>${D.length}</b>人</span>`;
   $("tabMonth").setAttribute("aria-selected",view===latest);
@@ -354,6 +404,156 @@ function render(){
 document.querySelectorAll("th button[data-k]").forEach(b=>b.addEventListener("click",()=>{key=b.dataset.k;document.querySelectorAll("th button[data-k]").forEach(x=>x.classList.toggle("on",x===b));render()}));
 $("q").addEventListener("input",render);
 
+/* ---------- 詳細成績(和了率など) ----------
+   牌譜から集計したCSV(対局記録が 202509.csv なら 202509-summary.csv)を、データ用リポジトリから読んで出す。チーム戦ランキングと同じ項目・同じ計算。
+   CSVは、1行が「1対局の1人」。対局記録とは ゲームID=牌譜リンク で結び付け、その対局の中の名前でプレイヤーIDを決める
+   (CSVの「内部ID」は、対局記録のプレイヤーIDとは別の番号のため)。月ごと・プレイヤーごとに足し合わせる。
+   月のランキングだけに出す。通算には出さない(全期間の summary がそろうまで保留)。 */
+/* 件数として読む列(ここに無い列は、和了役の回数として扱う) */
+const SUM_COL={hands:"局数",agari:"和了数",agariPts:"和了点合計",agariTurns:"和了巡目合計",tsumo:"ツモ和了",ron:"ロン和了",dama:"ダマ和了",yakuman:"役満和了",
+  dora:"ドラ",aka:"赤ドラ",ura:"裏ドラ",houju:"放銃数",houjuPts:"放銃点合計",riichiDeal:"立直後放銃",sengen:"宣言牌放銃",riichi:"立直数",riichiTurns:"立直巡目合計",
+  riichiWin:"立直和了",first:"先制立直",chase:"追っかけ立直",furo:"副露局数",furoWin:"副露和了",furoCount:"副露回数"};
+const MAX_COL={renchan:"最大連荘数"};                                         // 足さずに、いちばん大きい値を取る列
+const SKIP_COL=new Set(["ゲームID","名前","内部ID","和了点平均","和了巡目平均","放銃点平均","立直巡目平均","最高和了点"]);   // 使わない列(平均は、合計から計算し直す)
+/* maxScore=最大スコア。終局時の持ち点のうち、いちばん大きい値。これだけは summary ではなく、対局記録(牌譜履歴の「N位PT」)から取る */
+const SUM_KEYS=Object.keys(SUM_COL),MAX_KEYS=[...Object.keys(MAX_COL),"maxScore"];
+const emptyStat=()=>({games:0,...Object.fromEntries(SUM_KEYS.map(k=>[k,0])),...Object.fromEntries(MAX_KEYS.map(k=>[k,null])),yaku:new Map()});
+function addStat(to,x){
+  to.games+=x.games;
+  SUM_KEYS.forEach(k=>to[k]+=x[k]);
+  MAX_KEYS.forEach(k=>{if(x[k]!=null&&(to[k]==null||x[k]>to[k]))to[k]=x[k]});
+  for(const [y,c] of x.yaku) to.yaku.set(y,(to.yaku.get(y)||0)+c);
+  return to;
+}
+/* summary のCSV → {rows:[{gid,name,iid,x}],yakuNames:[役の名前(列の順)]}。x は1対局分の件数 */
+function toSummary(text){
+  const rows=parseCSV(text.replace(/^﻿/,""));
+  if(rows.length<2) throw new Error("データ行がない。");
+  const h=rows[0].map(s=>s.trim()),col=n=>h.indexOf(n),cg=col("ゲームID"),cn=col("名前"),ci=col("内部ID");
+  if(cg<0||cn<0||col("局数")<0) throw new Error("「ゲームID」「名前」「局数」の列がない。");
+  const used=new Set([...Object.values(SUM_COL),...Object.values(MAX_COL),...SKIP_COL]);
+  const yc=h.map((n,i)=>n&&!used.has(n)?[n,i]:null).filter(Boolean);            // 和了役の列
+  const num=v=>parseFloat(v)||0;
+  const out=rows.slice(1).map(r=>{
+    const x=emptyStat(); x.games=1;
+    SUM_KEYS.forEach(k=>{const c=col(SUM_COL[k]);if(c>=0)x[k]=num(r[c])});
+    Object.keys(MAX_COL).forEach(k=>{const c=col(MAX_COL[k]);if(c>=0)x[k]=num(r[c])});
+    for(const [n,c] of yc){const v=num(r[c]);if(v)x.yaku.set(n,v)}
+    return {gid:(r[cg]||"").trim(),name:cleanName((r[cn]||"").trim()),iid:ci>=0?(r[ci]||"").trim():"",x};
+  }).filter(r=>r.gid);
+  return {rows:out,yakuNames:yc.map(v=>v[0])};
+}
+/* 1か月分をプレイヤーごとに足す。games=その月の対局記録(非表示の対局を除いたあと)。
+   対局記録にないゲームIDの行は使わない。プレイヤーID → 件数 の Map を返す(1人も結び付かなければ null) */
+function buildSummary(sm,games){
+  const byLink=new Map(games.filter(g=>g[2]).map(g=>[g[2],g[1]]));           // 牌譜リンク → その対局の4人
+  const idOf=new Map(),pend=[];                                               // 内部ID → プレイヤーID
+  const M=new Map(),add=(pid,x)=>{let a=M.get(pid);if(!a){a=emptyStat();M.set(pid,a)}addStat(a,x)};
+  for(const r of sm.rows){
+    const seats=byLink.get(r.gid); if(!seats)continue;
+    const hit=seats.filter(v=>v[1]===r.name);
+    if(hit.length===1){if(r.iid)idOf.set(r.iid,hit[0][0]);add(hit[0][0],r.x)}
+    else pend.push([r,seats]);                                                // 名前で決まらない行は、ほかの対局でわかった内部IDから決める
+  }
+  for(const [r,seats] of pend){const pid=idOf.get(r.iid); if(pid&&seats.some(v=>v[0]===pid))add(pid,r.x)}
+  if(!M.size)return null;
+  /* 最大スコア(終局時の持ち点の最大)を、この月の対局記録から入れる */
+  for(const g of games)for(const [id,,,score] of g[1]){const a=M.get(id);if(a&&score!=null&&(a.maxScore==null||score>a.maxScore))a.maxScore=score}
+  M.yakuNames=sm.yakuNames;
+  return M;
+}
+/* 月ごとの集計。SUMM: 月 → Promise<プレイヤーID→件数 の Map(無ければ null)>。最初にその月を開いたときに読む。
+   SUMM_HAS は、GitHubのファイル一覧でわかった「summary のある月」。一覧が取れたときは、無い月を読みに行かない */
+const SUMM=new Map(),SUMM_OK=new Map();let SUMM_HAS=null;
+function summaryOf(ym){
+  if(ym==="total"||!SEASONS.has(ym)) return Promise.resolve(null);
+  if(!SUMM.has(ym)) SUMM.set(ym,(async()=>{
+    if(SUMM_HAS&&!SUMM_HAS.has(ym)) return null;
+    try{
+      const r=await fetchData(`${ym}-summary.csv`); if(!r.ok) return null;
+      return buildSummary(toSummary(decode(await r.arrayBuffer())),SEASONS.get(ym));
+    }catch(err){console.warn(`${ym}-summary.csv`,err);return null}
+  })().then(M=>{SUMM_OK.set(ym,M);return M}));
+  return SUMM.get(ym);
+}
+/* 個人の詳細成績(いま表示している月の集計が読めていて、その人の分があるときだけ。無ければ null) */
+function playerStat(id){const M=CUR!=="total"&&SUMM_OK.get(CUR);return M&&M.get(id)||null}
+const STAT_NOTE="項目を押すと、その項目のランキングが下に出る(和了役一覧は、役ごとの和了回数が出る)。和了率・放銃率・副露率・立直率は、局数に対する割合。立直成功率・立直後放銃率は、立直の回数に対する割合。ツモ率・ロン率・面前和了率・副露和了率は、和了の回数に対する割合。最大スコアは、終局時の持ち点のうち、いちばん大きいもの。ドラの平均枚数は、和了1回あたりの枚数(総ドラは、表ドラ・裏ドラ・赤ドラの合計)。副露率は、副露した局の割合(1局に何回鳴いても1回)。";
+/* 詳細成績の項目。val=並べ替えに使う値(出せないときは null)、show=表示、sub=もとの件数、asc=ランキングで小さいほうを上にする */
+const ratio=(a,b)=>b?a/b:null;
+const avg2=(a,b,u)=>b?(a/b).toFixed(2)+u:"—";
+const allDora=x=>x.dora+x.aka+x.ura;
+const STAT_DEFS=[
+  {k:"agari",label:"和了率",val:x=>ratio(x.agari,x.hands),show:x=>pct(x.agari,x.hands),sub:x=>`${x.agari}回 / ${x.hands}局`},
+  {k:"houju",label:"放銃率",val:x=>ratio(x.houju,x.hands),show:x=>pct(x.houju,x.hands),sub:x=>`${x.houju}回 / ${x.hands}局`,asc:true},
+  {k:"furo",label:"副露率",val:x=>ratio(x.furo,x.hands),show:x=>pct(x.furo,x.hands),sub:x=>`${x.furo}局 / ${x.hands}局`},
+  {k:"riichi",label:"立直率",val:x=>ratio(x.riichi,x.hands),show:x=>pct(x.riichi,x.hands),sub:x=>`${x.riichi}回 / ${x.hands}局`},
+  {k:"riichiWin",label:"立直成功率",val:x=>ratio(x.riichiWin,x.riichi),show:x=>pct(x.riichiWin,x.riichi),sub:x=>`${x.riichiWin}回 / 立直${x.riichi}回`},
+  {k:"riichiDeal",label:"立直後放銃率",val:x=>ratio(x.riichiDeal,x.riichi),show:x=>pct(x.riichiDeal,x.riichi),sub:x=>`${x.riichiDeal}回 / 立直${x.riichi}回`,asc:true},
+  {k:"tsumo",label:"ツモ率",val:x=>ratio(x.tsumo,x.agari),show:x=>pct(x.tsumo,x.agari),sub:x=>`${x.tsumo}回 / 和了${x.agari}回`},
+  {k:"ron",label:"ロン率",val:x=>ratio(x.ron,x.agari),show:x=>pct(x.ron,x.agari),sub:x=>`${x.ron}回 / 和了${x.agari}回`},
+  {k:"menzen",label:"面前和了率",val:x=>ratio(x.agari-x.furoWin,x.agari),show:x=>pct(x.agari-x.furoWin,x.agari),sub:x=>`${x.agari-x.furoWin}回 / 和了${x.agari}回`},
+  {k:"furoWin",label:"副露和了率",val:x=>ratio(x.furoWin,x.agari),show:x=>pct(x.furoWin,x.agari),sub:x=>`${x.furoWin}回 / 和了${x.agari}回`},
+  {k:"turn",label:"平均立直巡目",val:x=>ratio(x.riichiTurns,x.riichi),show:x=>avg2(x.riichiTurns,x.riichi,"巡"),sub:x=>`立直${x.riichi}回`,asc:true,word:"早い順"},
+  {k:"agariTurn",label:"平均和了巡目",val:x=>ratio(x.agariTurns,x.agari),show:x=>avg2(x.agariTurns,x.agari,"巡"),sub:x=>`和了${x.agari}回`,asc:true,word:"早い順"},
+  {k:"avg",label:"平均和了点",val:x=>ratio(x.agariPts,x.agari),show:x=>x.agari?comma(x.agariPts/x.agari)+"点":"—",sub:x=>`和了${x.agari}回`},
+  {k:"maxScore",label:"最大スコア",val:x=>x.maxScore,show:x=>x.maxScore!=null?(x.maxScore<0?"−":"")+comma(Math.abs(x.maxScore))+"点":"—",sub:x=>"終局時の持ち点",nosub:true},      // nosub=ランキングに件数の列を出さない(全員同じ文字になるため)
+  {k:"renchan",label:"最大連荘数",val:x=>x.renchan,show:x=>x.renchan!=null?x.renchan+"連荘":"—",sub:x=>`${x.hands}局`},
+  {k:"dora",label:"和了平均表ドラ枚数",val:x=>ratio(x.dora,x.agari),show:x=>avg2(x.dora,x.agari,"枚"),sub:x=>`${x.dora}枚 / 和了${x.agari}回`},
+  {k:"aka",label:"和了平均赤ドラ枚数",val:x=>ratio(x.aka,x.agari),show:x=>avg2(x.aka,x.agari,"枚"),sub:x=>`${x.aka}枚 / 和了${x.agari}回`},
+  {k:"ura",label:"和了平均裏ドラ枚数",val:x=>ratio(x.ura,x.agari),show:x=>avg2(x.ura,x.agari,"枚"),sub:x=>`${x.ura}枚 / 和了${x.agari}回`},
+  {k:"allDora",label:"和了平均総ドラ枚数",val:x=>ratio(allDora(x),x.agari),show:x=>avg2(allDora(x),x.agari,"枚"),sub:x=>`${allDora(x)}枚 / 和了${x.agari}回`},
+  {k:"houjuAvg",label:"平均放銃点",val:x=>ratio(x.houjuPts,x.houju),show:x=>x.houju?comma(x.houjuPts/x.houju)+"点":"—",sub:x=>`放銃${x.houju}回`,asc:true},
+  {k:"yaku",label:"和了役一覧",list:true,show:x=>"一覧を見る",sub:x=>`${x.yaku.size}種類 / 和了${x.agari}回`},
+];
+/* 詳細成績のタイル(個人・チーム共通)。x=件数、sel=下に開いている項目。タイルを押すと、その項目のランキング(和了役一覧は役の一覧)が下に出る */
+function statTiles(x,sel){
+  return STAT_DEFS.map(d=>`<button type="button" class="st${d.list?" list":""}" data-st="${d.k}" aria-pressed="${d.k===sel}" title="${d.label}${d.list?"":"のランキング"}を見る"><span class="k">${d.label}</span><span class="v">${d.show(x)}</span><span class="c">${d.sub(x)}</span></button>`).join("");
+}
+/* 項目 key のランキング。いま表示している月に対局があり、集計のある人が対象。
+   値のない人(割る数が0)は、順位を付けずに最後に並べる。BANの人も順位を付けず、最後に並べる。同じ値は同じ順位 */
+let STATSEL=null;                                     // 下に開いている項目
+function statRanking(key){
+  const d=STAT_DEFS.find(x=>x.k===key); if(!d)return "";
+  const rows=D.map(p=>({name:p.name,i:p.i,ban:p.ban,me:p.i===VSP,x:playerStat(p.id)})).filter(r=>r.x).map(r=>({...r,v:d.val(r.x)}));
+  const byName=(a,b)=>a.name.localeCompare(b.name,"ja");
+  const has=rows.filter(r=>r.v!=null&&!r.ban).sort((a,b)=>(d.asc?a.v-b.v:b.v-a.v)||byName(a,b)),none=rows.filter(r=>r.v==null&&!r.ban).sort(byName),ban=rows.filter(r=>r.ban).sort(byName);
+  const same=(a,b)=>d.show(a.x)===d.show(b.x)&&Math.abs(a.v-b.v)<1e-12;
+  let rank=0;
+  const tr=(r,rk)=>`<tr class="${r.me?"me":""}"><td class="rank">${rk}</td><td class="l"><button type="button" class="pname" data-i="${r.i}">${esc(r.name)}</button></td><td class="num v">${d.show(r.x)}${d.nosub?"":`<small>${d.sub(r.x)}</small>`}</td>${d.nosub?"":`<td class="num c">${d.sub(r.x)}</td>`}</tr>`;
+  return `<div class="srh"><b>${d.label}ランキング</b><span>${d.word||(d.asc?"低い順":"高い順")}・${rows.length}人</span><button type="button" class="srclose" data-stclose aria-label="ランキングを閉じる">閉じる</button></div>
+<div class="dtbox"><table class="vs srt"><thead><tr><th style="text-align:center">順位</th><th class="l">プレイヤー</th><th>${d.label}</th>${d.nosub?"":'<th class="c">件数</th>'}</tr></thead><tbody>${
+  has.map((r,i)=>{if(!i||!same(r,has[i-1]))rank=i+1;return tr(r,rank)}).join("")+none.map(r=>tr(r,"—")).join("")+ban.map(r=>tr(r,'<span class="banmark" title="不正によりBAN">BAN</span>')).join("")}</tbody></table></div>`;
+}
+/* 和了役一覧。ウィンドウに出している人の、役ごとの和了回数。多い順(同じ回数は、CSVの列の順) */
+function yakuList(){
+  const x=VSP!=null&&D[VSP]?playerStat(D[VSP].id):null; if(!x)return "";
+  const order=new Map(((SUMM_OK.get(CUR)||{}).yakuNames||[]).map((n,i)=>[n,i])),pos=n=>order.has(n)?order.get(n):1e9;
+  const list=[...x.yaku].sort((a,b)=>b[1]-a[1]||pos(a[0])-pos(b[0]));
+  return `<div class="srh"><b>和了役一覧</b><span>多い順・${list.length}種類・和了${x.agari}回</span><button type="button" class="srclose" data-stclose aria-label="和了役一覧を閉じる">閉じる</button></div>
+<div class="dtbox"><table class="vs srt yk"><thead><tr><th class="l">役</th><th>和了回数</th></tr></thead><tbody>${
+  list.length?list.map(([n,c])=>`<tr><td class="l">${esc(n)}</td><td class="num v">${c}回</td></tr>`).join(""):'<tr><td colspan="2" class="empty">和了がない</td></tr>'}</tbody></table></div>`;
+}
+/* 下の欄を、いま選んでいる項目に合わせて描き直す */
+function showRanking(){
+  $("stgrid").querySelectorAll(".st").forEach(b=>b.setAttribute("aria-pressed",b.dataset.st===STATSEL));
+  const d=STAT_DEFS.find(x=>x.k===STATSEL),box=$("strank");
+  box.hidden=!d; box.innerHTML=!d?"":d.list?yakuList():statRanking(STATSEL);
+}
+/* 集計した範囲の説明。「2025年9月・1,234局(99対局)を牌譜から集計」。対局記録より少ないときは、その数も出す */
+const statScope=(x,n)=>`${ymLabel(CUR)}・${x.hands}局(${x.games}対局${x.games<n?`。対局記録は${n}対局`:""})を牌譜から集計`;
+const pct=(a,b)=>b?(a/b*100).toFixed(1)+"%":"—";
+const comma=v=>String(Math.round(v)).replace(/\B(?=(\d{3})+$)/g,",");
+/* 成績ウィンドウの詳細成績の欄。いま出している人(VSP)の分を描く。集計が無い月・通算・その人の分が無いときは、欄ごと出さない */
+function renderStat(){
+  const p=VSP!=null?D[VSP]:null,x=p?playerStat(p.id):null;
+  $("secStat").hidden=!x;
+  if(!x){$("stgrid").innerHTML="";$("strank").hidden=true;return}
+  $("stsub").textContent=statScope(x,p.n);
+  $("stgrid").innerHTML=statTiles(x,STATSEL);
+  $("stnote").textContent=STAT_NOTE;
+  showRanking();
+}
 /* 相性表 */
 const dlg=$("dlg");
 function curYM(){const d=new Date();return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}`}
@@ -411,6 +611,8 @@ function openVs(i){
   setHelp(false);                                    // 説明は、開くたびに閉じた状態から始める
   $("dsub").innerHTML=`<span>総合 <b>${p.ban?"BAN":p.rank+"位"}</b></span><span>合計PT <b class="${p.pt>=0?"plus":"minus"}">${f(p.pt,1)}</b></span><span>対局数 <b>${p.n}</b></span><span>対戦相手 <b>${p.vs.length}</b>人</span>`;
   VSP=i;renderVs();
+  renderStat();                                      // 詳細成績(その月の集計が読めていれば出る。まだなら、読めたときに出す)
+  const view=CUR;summaryOf(view).then(()=>{if(CUR===view&&VSP===i&&dlg.open)renderStat()});
   if(!dlg.open) dlg.showModal();
   $("dclose").focus({preventScroll:true}); dlg.scrollTop=0;
 }
@@ -425,6 +627,14 @@ function setHelp(open){$("vhelpbox").hidden=!open;$("vhelp").setAttribute("aria-
 $("vhelp").addEventListener("click",()=>setHelp($("vhelpbox").hidden));
 $("dclose").addEventListener("click",()=>dlg.close());
 dlg.addEventListener("click",e=>{if(e.target===dlg)dlg.close()});
+/* 詳細成績のタイル: 押した項目のランキングを開く。開いている項目をもう一度押すと閉じる。ランキングの名前を押すと、その人の成績に切り替わる */
+$("secStat").addEventListener("click",e=>{
+  const sb=e.target.closest("[data-st]"); if(sb){STATSEL=STATSEL===sb.dataset.st?null:sb.dataset.st;showRanking();
+    if(STATSEL)$("strank").scrollIntoView({block:"nearest",inline:"nearest",behavior:"smooth"});return}
+  if(e.target.closest("[data-stclose]")){STATSEL=null;showRanking();return}
+  const pb=e.target.closest(".pname[data-i]"); if(pb)openVs(+pb.dataset.i);
+});
+dlg.addEventListener("close",()=>{STATSEL=null});      // ウィンドウを閉じたら、ランキングも閉じた状態に戻す
 
 /* CSV 読み込み */
 function parseCSV(text){
@@ -493,6 +703,7 @@ async function listByApi(){
     const r=await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/?t=${Date.now()}`);
     if(!r.ok) return null;
     const files=await r.json();
+    SUMM_HAS=new Set(files.map(f=>f.name).filter(n=>/^\d{6}-summary\.csv$/.test(n)).map(n=>n.slice(0,6)));   // 詳細成績(牌譜の集計)のある月
     return files.map(f=>f.name).filter(n=>/^\d{6}\.csv$/.test(n)).map(n=>n.slice(0,6)).filter(isYM);
   }catch(e){return null}
 }
