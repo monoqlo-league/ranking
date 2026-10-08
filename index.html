@@ -407,7 +407,7 @@ document.querySelectorAll("th button[data-k]").forEach(b=>b.addEventListener("cl
 $("q").addEventListener("input",render);
 
 /* ---------- 詳細成績(和了率など) ----------
-   牌譜から集計したCSV(対局記録が 202509.csv なら 202509-summary.csv)を、データ用リポジトリから読んで出す。チーム戦ランキングと同じ項目・同じ計算。
+   牌譜から集計したCSV(対局記録が 202509.csv なら summary/202509-summary.csv)を、データ用リポジトリから読んで出す。チーム戦ランキングと同じ項目・同じ計算。
    CSVは、1行が「1対局の1人」。対局記録とは ゲームID=牌譜リンク で結び付け、その対局の中の名前でプレイヤーIDを決める
    (CSVの「内部ID」は、対局記録のプレイヤーIDとは別の番号のため)。月ごと・プレイヤーごとに足し合わせる。
    月のランキングだけに出す。通算には出さない(全期間の summary がそろうまで保留)。 */
@@ -465,15 +465,20 @@ function buildSummary(sm,games){
   return M;
 }
 /* 月ごとの集計。SUMM: 月 → Promise<プレイヤーID→件数 の Map(無ければ null)>。最初にその月を開いたときに読む。
-   SUMM_HAS は、GitHubのファイル一覧でわかった「summary のある月」。一覧が取れたときは、無い月を読みに行かない */
+   SUMM_HAS は、GitHubのファイル一覧でわかった「summary のある月 → ファイルの場所」。一覧が取れたときは、無い月を読みに行かない。
+   置き場所は summary フォルダ。一覧が取れないときは summary フォルダ → リポジトリ直下(以前の置き場所)の順に探す */
 const SUMM=new Map(),SUMM_OK=new Map();let SUMM_HAS=null;
 function summaryOf(ym){
   if(ym==="total"||!SEASONS.has(ym)) return Promise.resolve(null);
   if(!SUMM.has(ym)) SUMM.set(ym,(async()=>{
     if(SUMM_HAS&&!SUMM_HAS.has(ym)) return null;
+    const names=SUMM_HAS?[SUMM_HAS.get(ym)]:[`summary/${ym}-summary.csv`,`${ym}-summary.csv`];
     try{
-      const r=await fetchData(`${ym}-summary.csv`); if(!r.ok) return null;
-      return buildSummary(toSummary(decode(await r.arrayBuffer())),SEASONS.get(ym));
+      for(const name of names){
+        const r=await fetchData(name); if(!r.ok) continue;
+        return buildSummary(toSummary(decode(await r.arrayBuffer())),SEASONS.get(ym));
+      }
+      return null;
     }catch(err){console.warn(`${ym}-summary.csv`,err);return null}
   })().then(M=>{SUMM_OK.set(ym,M);return M}));
   return SUMM.get(ym);
@@ -684,7 +689,7 @@ function decode(buf){
 function fail(msg){$("tb").innerHTML=`<tr><td colspan="10" class="empty">${esc(msg)}</td></tr>`;$("meta").innerHTML=""}
 
 /* シーズン(月)ファイルを探す
-   1. GitHubのAPIでリポジトリ直下のファイル一覧を取り、YYYYMM.csv をすべて拾う
+   1. GitHubのAPIでリポジトリのファイル一覧(フォルダの中も含む)を取り、直下の YYYYMM.csv をすべて拾う
    2. APIが使えないとき(回数制限・独自ドメインなど)は、来月から過去へ順にファイルを確かめる */
 const REPO_OWNER=location.hostname.endsWith(".github.io")?location.hostname.split(".")[0]:"";
 /* データ(年月CSV・ban.csv)は別リポジトリに置く。名前を変えたらここも変える */
@@ -702,11 +707,14 @@ const isYM=s=>/^\d{4}(0[1-9]|1[0-2])$/.test(s);
 async function listByApi(){
   if(!REPO_OWNER||!REPO_NAME) return null;
   try{
-    const r=await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/?t=${Date.now()}`);
+    const r=await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/git/trees/HEAD?recursive=1&t=${Date.now()}`);
     if(!r.ok) return null;
-    const files=await r.json();
-    SUMM_HAS=new Set(files.map(f=>f.name).filter(n=>/^\d{6}-summary\.csv$/.test(n)).map(n=>n.slice(0,6)));   // 詳細成績(牌譜の集計)のある月
-    return files.map(f=>f.name).filter(n=>/^\d{6}\.csv$/.test(n)).map(n=>n.slice(0,6)).filter(isYM);
+    const j=await r.json(); if(j.truncated||!Array.isArray(j.tree)) return null;
+    const paths=j.tree.filter(f=>f.type==="blob").map(f=>f.path);
+    // 詳細成績(牌譜の集計)のある月 → ファイルの場所。summary フォルダの中を優先し、無ければ直下(以前の置き場所)
+    SUMM_HAS=new Map();
+    for(const dir of ["","summary/"]) for(const p of paths){const m=p.match(/^(?:summary\/)?(\d{6})-summary\.csv$/);if(m&&p.startsWith(dir)&&(dir||!p.includes("/")))SUMM_HAS.set(m[1],p)}
+    return paths.filter(n=>/^\d{6}\.csv$/.test(n)).map(n=>n.slice(0,6)).filter(isYM);
   }catch(e){return null}
 }
 function prevYM(ym){let y=+ym.slice(0,4),m=+ym.slice(4)-1;if(m<1){m=12;y--}return `${y}${String(m).padStart(2,"0")}`}
