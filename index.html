@@ -454,7 +454,7 @@ function buildSummary(sm,games){
   const M=new Map(),add=(pid,x)=>{let a=M.get(pid);if(!a){a=emptyStat();M.set(pid,a)}addStat(a,x)};
   for(const r of sm.rows){
     const seats=byLink.get(r.gid); if(!seats)continue;
-    const hit=seats.filter(v=>v[1]===r.name);
+    const hit=seats.filter(v=>v[1].trim()===r.name);                        // 名前の前後の空白(全角も)は除いて比べる(summary 側は除かれている)
     if(hit.length===1){if(r.iid)idOf.set(r.iid,hit[0][0]);add(hit[0][0],r.x)}
     else pend.push([r,seats]);                                                // 名前で決まらない行は、ほかの対局でわかった内部IDから決める
   }
