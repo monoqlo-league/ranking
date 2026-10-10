@@ -336,8 +336,12 @@ const p2=v=>String(v).padStart(2,"0");
 const fmtDT=d=>`${d.getFullYear()}/${p2(d.getMonth()+1)}/${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
 const UPD=new Map();                                  // CSVの名前 → 更新日時を取る約束(同じものを何度も取りに行かない)
 function updatedAt(view){
-  if(!REPO_OWNER) return Promise.resolve(null);
   const path=view==="total"?"":`${view}.csv`;
+  if(INDEX){                                          // index.json にあれば、API を使わない(通算は、CSVのうちいちばん新しい更新)
+    const t=path?INDEX.files[path]&&INDEX.files[path].updated:INDEX.latest;
+    if(t&&!isNaN(new Date(t))) return Promise.resolve(new Date(t));
+  }
+  if(!REPO_OWNER) return Promise.resolve(null);
   if(!UPD.has(path)) UPD.set(path,(async()=>{
     const key=`monoqlo-upd:${path}`;
     try{const c=JSON.parse(sessionStorage.getItem(key)||"null"); if(c&&c.t&&Date.now()-c.at<5*60e3) return new Date(c.t)}catch(e){}   // 5分は覚えておく
@@ -369,7 +373,6 @@ function load(view){
   $("ttl").innerHTML=`<span class="tt">${view==="total"?"通算 PTランキング":`${ymLabel(view)} PTランキング`}`+
     (view!=="total"&&monthDone(view)?`<img class="stamp" src="${encodeURIComponent("完了")}.png" alt="完了" width="180" height="180">`:"")+`</span>`;
   showUpdated(view,games);
-  summaryOf(view);                                   // その月の詳細成績(牌譜の集計)を読み始める
   $("meta").innerHTML=(view==="total"?`<span>シーズン <b>${MONTHS.length}</b>(${ymLabel(MONTHS[MONTHS.length-1])}〜${ymLabel(latest)})</span>`:"")+
     `<span>集計期間 <b>${a.replace(/-/g,"/")} – ${b.replace(/-/g,"/")}</b></span><span>対局数 <b>${games.length}</b></span><span>参加者 <b>${D.length}</b>人</span>`;
   $("tabMonth").setAttribute("aria-selected",view===latest);
@@ -465,7 +468,7 @@ function buildSummary(sm,games){
   M.yakuNames=sm.yakuNames;
   return M;
 }
-/* 月ごとの集計。SUMM: 月 → Promise<プレイヤーID→件数 の Map(無ければ null)>。最初にその月を開いたときに読む。
+/* 月ごとの集計。SUMM: 月 → Promise<プレイヤーID→件数 の Map(無ければ null)>。その月の成績のウィンドウを初めて開いたときに読む(最初の表示を軽くするため)。
    SUMM_HAS は、GitHubのファイル一覧でわかった「summary のある月 → ファイルの場所」。一覧が取れたときは、無い月を読みに行かない。
    置き場所は summary フォルダ。一覧が取れないときは summary フォルダ → リポジトリ直下(以前の置き場所)の順に探す */
 const SUMM=new Map(),SUMM_OK=new Map();let SUMM_HAS=null;
@@ -555,8 +558,10 @@ const comma=v=>String(Math.round(v)).replace(/\B(?=(\d{3})+$)/g,",");
 /* 成績ウィンドウの詳細成績の欄。いま出している人(VSP)の分を描く。集計が無い月・通算・その人の分が無いときは、欄ごと出さない */
 function renderStat(){
   const p=VSP!=null?D[VSP]:null,x=p?playerStat(p.id):null;
-  $("secStat").hidden=!x;
-  if(!x){$("stgrid").innerHTML="";$("strank").hidden=true;return}
+  /* その月の集計をまだ読み終えていない(集計のある月か、一覧がわからない)ときは「読み込み中」と出す */
+  const pending=p&&!x&&CUR!=="total"&&!SUMM_OK.has(CUR)&&(!SUMM_HAS||SUMM_HAS.has(CUR));
+  $("secStat").hidden=!x&&!pending;
+  if(!x){$("stgrid").innerHTML="";$("strank").hidden=true;if(pending){$("stsub").textContent="読み込み中…";$("stnote").textContent=""}return}
   $("stsub").textContent=statScope(x,p.n);
   $("stgrid").innerHTML=statTiles(x,STATSEL);
   $("stnote").textContent=STAT_NOTE;
@@ -705,17 +710,42 @@ async function fetchData(name){
   return r||{ok:false,status:0};
 }
 const isYM=s=>/^\d{4}(0[1-9]|1[0-2])$/.test(s);
+/* ファイル一覧(index.json)。データ用リポジトリの GitHub Actions が、CSVを上げるたびに作り直す。
+   ファイルごとの最終更新日時も入っているので、これが読めれば GitHub の API(1時間60回の制限)を使わない。
+   GitHub Pages には自動の更新が反映されないことがあるため、生ファイル(raw)から先に読む */
+let INDEX=null;
+async function loadIndex(){
+  try{
+    const q=`?t=${Date.now()}`;
+    let r=REPO_OWNER?await fetch(`https://raw.githubusercontent.com/${REPO_OWNER}/${DATA_REPO}/HEAD/index.json${q}`,{cache:"no-store"}).catch(()=>null):null;
+    if(!r||!r.ok) r=await fetch(DATA_BASE+"index.json"+(REPO_OWNER?q:""),{cache:"no-store"}).catch(()=>null);
+    if(!r||!r.ok) return null;
+    const j=await r.json();
+    return j&&j.files&&typeof j.files==="object"?j:null;
+  }catch(e){return null}
+}
+/* 一覧のファイル名から、年月CSVと詳細成績の場所を拾う */
+function fromPaths(paths){
+  // 詳細成績(牌譜の集計)のある月 → ファイルの場所。summary フォルダの中を優先し、無ければ直下(以前の置き場所)
+  SUMM_HAS=new Map();
+  for(const dir of ["","summary/"]) for(const p of paths){const m=p.match(/^(?:summary\/)?(\d{6})-summary\.csv$/);if(m&&p.startsWith(dir)&&(dir||!p.includes("/")))SUMM_HAS.set(m[1],p)}
+  return paths.filter(n=>/^\d{6}\.csv$/.test(n)).map(n=>n.slice(0,6)).filter(isYM);
+}
 async function listByApi(){
+  INDEX=await loadIndex();
+  if(INDEX){
+    const yms=fromPaths(Object.keys(INDEX.files));
+    /* 上げたばかりで index.json がまだ作り直されていない今月のCSVも拾う(今月が一覧に無ければ、1回だけ確かめる) */
+    const now=new Date(),cur=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,"0")}`;
+    if(yms.length) return yms.includes(cur)?yms:yms.concat(cur);
+  }
   if(!REPO_OWNER||!REPO_NAME) return null;
   try{
     const r=await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/git/trees/HEAD?recursive=1&t=${Date.now()}`);
     if(!r.ok) return null;
     const j=await r.json(); if(j.truncated||!Array.isArray(j.tree)) return null;
     const paths=j.tree.filter(f=>f.type==="blob").map(f=>f.path);
-    // 詳細成績(牌譜の集計)のある月 → ファイルの場所。summary フォルダの中を優先し、無ければ直下(以前の置き場所)
-    SUMM_HAS=new Map();
-    for(const dir of ["","summary/"]) for(const p of paths){const m=p.match(/^(?:summary\/)?(\d{6})-summary\.csv$/);if(m&&p.startsWith(dir)&&(dir||!p.includes("/")))SUMM_HAS.set(m[1],p)}
-    return paths.filter(n=>/^\d{6}\.csv$/.test(n)).map(n=>n.slice(0,6)).filter(isYM);
+    return fromPaths(paths);
   }catch(e){return null}
 }
 function prevYM(ym){let y=+ym.slice(0,4),m=+ym.slice(4)-1;if(m<1){m=12;y--}return `${y}${String(m).padStart(2,"0")}`}
