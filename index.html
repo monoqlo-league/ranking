@@ -250,7 +250,7 @@ footer{font-size:12px;color:var(--muted)}
 <tbody id="tb"><tr><td colspan="10" class="empty">読み込み中…</td></tr></tbody>
 </table>
 </div>
-<footer>順位は合計PTの高い順。見出しの「対局数」「平均PT」「平均順位」「トップ率」「連対率」「ラス回避率」を押すと並べ替えできる(順位列は合計PT順のまま)。プレイヤー名を押すと、成績(入賞記録・詳細成績・戦績・相性表)が開く。詳細成績は、牌譜の集計がある月だけに出る。「BAN」は不正によりBANされたプレイヤーで、BANされた月以降と通算では成績はそのままに順位の対象外として最下位に表示する。</footer>
+<footer>順位は合計PTの高い順。見出しの「対局数」「平均PT」「平均順位」「トップ率」「連対率」「ラス回避率」を押すと並べ替えできる(順位列は合計PT順のまま)。プレイヤー名を押すと、成績(入賞記録・詳細成績・戦績・相性表)が開く。詳細成績は、牌譜の集計がある月だけに出る。通算の詳細成績は、集計のある月を足し合わせたもの。「BAN」は不正によりBANされたプレイヤーで、BANされた月以降と通算では成績はそのままに順位の対象外として最下位に表示する。</footer>
 
 </div>
 
@@ -414,7 +414,7 @@ $("q").addEventListener("input",render);
    牌譜から集計したCSV(対局記録が 202509.csv なら summary/202509-summary.csv)を、データ用リポジトリから読んで出す。チーム戦ランキングと同じ項目・同じ計算。
    CSVは、1行が「1対局の1人」。対局記録とは ゲームID=牌譜リンク で結び付け、その対局の中の名前でプレイヤーIDを決める
    (CSVの「内部ID」は、対局記録のプレイヤーIDとは別の番号のため)。月ごと・プレイヤーごとに足し合わせる。
-   月のランキングだけに出す。通算には出さない(全期間の summary がそろうまで保留)。 */
+   通算では、集計のある月をすべて足し合わせて出す(集計の無い月の対局は含まれない)。 */
 /* 件数として読む列(ここに無い列は、和了役の回数として扱う) */
 const SUM_COL={hands:"局数",agari:"和了数",agariPts:"和了点合計",agariTurns:"和了巡目合計",tsumo:"ツモ和了",ron:"ロン和了",dama:"ダマ和了",yakuman:"役満和了",
   dora:"ドラ",aka:"赤ドラ",ura:"裏ドラ",houju:"放銃数",houjuPts:"放銃点合計",riichiDeal:"立直後放銃",sengen:"宣言牌放銃",riichi:"立直数",riichiTurns:"立直巡目合計",
@@ -473,7 +473,8 @@ function buildSummary(sm,games){
    置き場所は summary フォルダ。一覧が取れないときは summary フォルダ → リポジトリ直下(以前の置き場所)の順に探す */
 const SUMM=new Map(),SUMM_OK=new Map();let SUMM_HAS=null;
 function summaryOf(ym){
-  if(ym==="total"||!SEASONS.has(ym)) return Promise.resolve(null);
+  if(ym==="total") return summaryTotal();
+  if(!SEASONS.has(ym)) return Promise.resolve(null);
   if(!SUMM.has(ym)) SUMM.set(ym,(async()=>{
     if(SUMM_HAS&&!SUMM_HAS.has(ym)) return null;
     const names=SUMM_HAS?[SUMM_HAS.get(ym)]:[`summary/${ym}-summary.csv`,`${ym}-summary.csv`];
@@ -487,8 +488,25 @@ function summaryOf(ym){
   })().then(M=>{SUMM_OK.set(ym,M);return M}));
   return SUMM.get(ym);
 }
-/* 個人の詳細成績(いま表示している月の集計が読めていて、その人の分があるときだけ。無ければ null) */
-function playerStat(id){const M=CUR!=="total"&&SUMM_OK.get(CUR);return M&&M.get(id)||null}
+/* 通算の集計。集計のある月をすべて読み、プレイヤーごとに足す(最大スコア・最大連荘数は、全期間でいちばん大きい値)。
+   M.months=足した月の数、M.from/M.to=その最初と最後の月 */
+function summaryTotal(){
+  if(!SUMM.has("total")) SUMM.set("total",(async()=>{
+    const yms=[...SEASONS.keys()].filter(ym=>!SUMM_HAS||SUMM_HAS.has(ym)).sort();
+    const list=(await Promise.all(yms.map(ym=>summaryOf(ym).then(M=>[ym,M])))).filter(v=>v[1]);
+    if(!list.length) return null;
+    const T=new Map(),names=[];
+    for(const [,M] of list){
+      for(const [pid,x] of M){let a=T.get(pid);if(!a){a=emptyStat();T.set(pid,a)}addStat(a,x)}
+      for(const n of M.yakuNames||[]) if(!names.includes(n)) names.push(n);
+    }
+    T.yakuNames=names; T.months=list.length; T.from=list[0][0]; T.to=list[list.length-1][0];
+    return T;
+  })().then(M=>{SUMM_OK.set("total",M);return M}));
+  return SUMM.get("total");
+}
+/* 個人の詳細成績(いま表示している範囲(月・通算)の集計が読めていて、その人の分があるときだけ。無ければ null) */
+function playerStat(id){const M=SUMM_OK.get(CUR);return M&&M.get(id)||null}
 const STAT_NOTE="項目を押すと、その項目のランキングが下に出る(和了役一覧は、役ごとの和了回数が出る)。和了率・放銃率・副露率・立直率は、局数に対する割合。立直成功率・立直後放銃率は、立直の回数に対する割合。ツモ率・ロン率・面前和了率・副露和了率は、和了の回数に対する割合。最大スコアは、終局時の持ち点のうち、いちばん大きいもの。ドラの平均枚数は、和了1回あたりの枚数(総ドラは、表ドラ・裏ドラ・赤ドラの合計)。副露率は、副露した局の割合(1局に何回鳴いても1回)。";
 /* 詳細成績の項目。val=並べ替えに使う値(出せないときは null)、show=表示、sub=もとの件数、asc=ランキングで小さいほうを上にする */
 const ratio=(a,b)=>b?a/b:null;
@@ -552,14 +570,16 @@ function showRanking(){
   box.hidden=!d; box.innerHTML=!d?"":d.list?yakuList():statRanking(STATSEL);
 }
 /* 集計した範囲の説明。「2025年9月・1,234局(99対局)を牌譜から集計」。対局記録より少ないときは、その数も出す */
-const statScope=(x,n)=>`${ymLabel(CUR)}・${x.hands}局(${x.games}対局${x.games<n?`。対局記録は${n}対局`:""})を牌譜から集計`;
+const statScope=(x,n)=>`${CUR==="total"?totalLabel():ymLabel(CUR)}・${x.hands}局(${x.games}対局${x.games<n?`。対局記録は${n}対局`:""})を牌譜から集計`;
+/* 通算の範囲の説明。「通算(2025年9月〜2026年6月のうち集計のある9か月)」 */
+function totalLabel(){const T=SUMM_OK.get("total");return T?`通算(${ymLabel(T.from)}〜${ymLabel(T.to)}のうち集計のある${T.months}か月)`:"通算"}
 const pct=(a,b)=>b?(a/b*100).toFixed(1)+"%":"—";
 const comma=v=>String(Math.round(v)).replace(/\B(?=(\d{3})+$)/g,",");
-/* 成績ウィンドウの詳細成績の欄。いま出している人(VSP)の分を描く。集計が無い月・通算・その人の分が無いときは、欄ごと出さない */
+/* 成績ウィンドウの詳細成績の欄。いま出している人(VSP)の分を描く。集計が無い月・その人の分が無いときは、欄ごと出さない */
 function renderStat(){
   const p=VSP!=null?D[VSP]:null,x=p?playerStat(p.id):null;
   /* その月の集計をまだ読み終えていない(集計のある月か、一覧がわからない)ときは「読み込み中」と出す */
-  const pending=p&&!x&&CUR!=="total"&&!SUMM_OK.has(CUR)&&(!SUMM_HAS||SUMM_HAS.has(CUR));
+  const pending=p&&!x&&!SUMM_OK.has(CUR)&&(CUR==="total"||!SUMM_HAS||SUMM_HAS.has(CUR));
   $("secStat").hidden=!x&&!pending;
   if(!x){$("stgrid").innerHTML="";$("strank").hidden=true;if(pending){$("stsub").textContent="読み込み中…";$("stnote").textContent=""}return}
   $("stsub").textContent=statScope(x,p.n);
