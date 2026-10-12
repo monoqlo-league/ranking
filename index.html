@@ -569,8 +569,8 @@ function showRanking(){
   const d=STAT_DEFS.find(x=>x.k===STATSEL),box=$("strank");
   box.hidden=!d; box.innerHTML=!d?"":d.list?yakuList():statRanking(STATSEL);
 }
-/* 集計した範囲の説明。「943/1450対局 反映済」(牌譜の集計に入っている対局数 / その人の対局数) */
-const statScope=(x,n)=>`${x.games}/${n}対局 反映済`;
+/* 集計した範囲の説明。「943/1450半荘 反映済」(牌譜の集計に入っている対局数 / その人の対局数) */
+const statScope=(x,n)=>`${x.games}/${n}半荘 反映済`;
 const pct=(a,b)=>b?(a/b*100).toFixed(1)+"%":"—";
 const comma=v=>String(Math.round(v)).replace(/\B(?=(\d{3})+$)/g,",");
 /* 成績ウィンドウの詳細成績の欄。いま出している人(VSP)の分を描く。集計が無い月・その人の分が無いときは、欄ごと出さない */
