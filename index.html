@@ -702,8 +702,21 @@ const REPO_OWNER=location.hostname.endsWith(".github.io")?location.hostname.spli
 const DATA_REPO="monoqlo-data";
 const REPO_NAME=REPO_OWNER?DATA_REPO:"";
 const DATA_BASE=REPO_OWNER?`${location.origin}/${DATA_REPO}/`:"";  // GitHub Pages以外(手元での確認)では同じ場所から読む
-/* データ用リポジトリのファイルを取る。GitHub Pagesで見つからなければ、GitHubの生ファイル(raw)から取る */
+/* データ用リポジトリの最新の版(コミットID)。ページを開いたときに GitHub へ1回だけ問い合わせる。
+   版を名指しした生ファイル(raw)は古い内容が返らないので、CSVを上げた直後でもすぐ読める(HEAD の生ファイルは最大5分ほど古いことがある)。
+   問い合わせできないとき(1時間60回の制限・手元での確認など)は null になり、これまでどおり HEAD から読む */
+const HEAD_SHA=REPO_OWNER?fetch(`https://api.github.com/repos/${REPO_OWNER}/${DATA_REPO}/commits/HEAD`,{headers:{Accept:"application/vnd.github.sha"},cache:"no-store"})
+  .then(r=>r.ok?r.text():"").then(s=>(s=s.trim(),/^[0-9a-f]{40}$/.test(s)?s:null)).catch(()=>null):Promise.resolve(null);
+/* 最新の版を名指しして生ファイルを取る。版が分からないときや、つながらないときは null(呼び出し側で従来の読み方に戻る)。
+   404 は「最新の版にそのファイルが無い」ことなので、そのまま返す */
+async function fetchPinned(path){
+  const sha=await HEAD_SHA; if(!sha) return null;
+  const r=await fetch(`https://raw.githubusercontent.com/${REPO_OWNER}/${DATA_REPO}/${sha}/${path}`).catch(()=>null);
+  return r&&(r.ok||r.status===404)?r:null;
+}
+/* データ用リポジトリのファイルを取る。最新の版を名指しして読む。それができないときは GitHub Pages、そこで見つからなければ GitHubの生ファイル(raw、HEAD)から取る */
 async function fetchData(name){
+  const pin=await fetchPinned(name); if(pin) return pin;
   const q=`?t=${Date.now()}`;
   let r=await fetch(DATA_BASE+name+q,{cache:"no-store"}).catch(()=>null);
   if((!r||!r.ok)&&REPO_OWNER) r=await fetch(`https://raw.githubusercontent.com/${REPO_OWNER}/${DATA_REPO}/HEAD/${name}${q}`,{cache:"no-store"}).catch(()=>null);
@@ -717,7 +730,8 @@ let INDEX=null;
 async function loadIndex(){
   try{
     const q=`?t=${Date.now()}`;
-    let r=REPO_OWNER?await fetch(`https://raw.githubusercontent.com/${REPO_OWNER}/${DATA_REPO}/HEAD/index.json${q}`,{cache:"no-store"}).catch(()=>null):null;
+    let r=await fetchPinned("index.json"); if(r&&!r.ok) r=null;
+    if(!r) r=REPO_OWNER?await fetch(`https://raw.githubusercontent.com/${REPO_OWNER}/${DATA_REPO}/HEAD/index.json${q}`,{cache:"no-store"}).catch(()=>null):null;
     if(!r||!r.ok) r=await fetch(DATA_BASE+"index.json"+(REPO_OWNER?q:""),{cache:"no-store"}).catch(()=>null);
     if(!r||!r.ok) return null;
     const j=await r.json();
