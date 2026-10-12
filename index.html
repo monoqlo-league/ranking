@@ -569,10 +569,8 @@ function showRanking(){
   const d=STAT_DEFS.find(x=>x.k===STATSEL),box=$("strank");
   box.hidden=!d; box.innerHTML=!d?"":d.list?yakuList():statRanking(STATSEL);
 }
-/* 集計した範囲の説明。「2025年9月・1,234局(99対局)を牌譜から集計」。対局記録より少ないときは、その数も出す */
-const statScope=(x,n)=>`${CUR==="total"?totalLabel():ymLabel(CUR)}・${x.hands}局(${x.games}対局${x.games<n?`。対局記録は${n}対局`:""})を牌譜から集計`;
-/* 通算の範囲の説明。「通算(2025年9月〜2026年6月のうち集計のある9か月)」 */
-function totalLabel(){const T=SUMM_OK.get("total");return T?`通算(${ymLabel(T.from)}〜${ymLabel(T.to)}のうち集計のある${T.months}か月)`:"通算"}
+/* 集計した範囲の説明。「943/1450対局 反映済」(牌譜の集計に入っている対局数 / その人の対局数) */
+const statScope=(x,n)=>`${x.games}/${n}対局 反映済`;
 const pct=(a,b)=>b?(a/b*100).toFixed(1)+"%":"—";
 const comma=v=>String(Math.round(v)).replace(/\B(?=(\d{3})+$)/g,",");
 /* 成績ウィンドウの詳細成績の欄。いま出している人(VSP)の分を描く。集計が無い月・その人の分が無いときは、欄ごと出さない */
