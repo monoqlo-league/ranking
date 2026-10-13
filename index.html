@@ -254,7 +254,7 @@ footer{font-size:12px;color:var(--muted)}
 <tbody id="tb"><tr><td colspan="10" class="empty">読み込み中…</td></tr></tbody>
 </table>
 </div>
-<footer>順位は合計PTの高い順。見出しの「対局数」「平均PT」「平均順位」「トップ率」「連対率」「ラス回避率」を押すと並べ替えできる(順位列は合計PT順のまま)。プレイヤー名を押すと、成績(入賞記録・詳細成績・戦績・相性表)が開く。詳細成績は、牌譜の集計がある月だけに出る。通算の詳細成績は、集計のある月を足し合わせたもの。通算ランキングと、通算の詳細成績の項目ランキングでは、10戦未満のプレイヤーは順位を「—」とし、順位のあるプレイヤーの後・BANの前に表示する。「BAN」は不正によりBANされたプレイヤーで、BANされた月以降と通算では成績はそのままに順位の対象外として最下位に表示する。</footer>
+<footer>順位は合計PTの高い順。見出しの「対局数」「平均PT」「平均順位」「トップ率」「連対率」「ラス回避率」を押すと並べ替えできる(順位列は合計PT順のまま)。プレイヤー名を押すと、成績(入賞記録・詳細成績・戦績・相性表)が開く。詳細成績は、牌譜の集計がある月だけに出る。通算の詳細成績は、集計のある月を足し合わせたもの。通算ランキングと、通算の詳細成績の項目ランキングには、10戦未満のプレイヤーを出さない。「BAN」は不正によりBANされたプレイヤーで、BANされた月以降と通算では成績はそのままに順位の対象外として最下位に表示する。</footer>
 
 </div>
 
@@ -321,7 +321,7 @@ function compute(games,view){
     });
   }
   // BAN対象(BAN月以降・通算)は成績はそのまま、順位の対象外として最下位に置く
-  // 通算は、対局数が TOTAL_MIN 未満の人に順位を付けない(表には出し、順位は「—」で、順位のある人の後・BANの前に置く)
+  // 通算は、対局数が TOTAL_MIN 未満の人を表から外す(ランキング・詳細成績の項目ランキングに出さない。順位も付けない)
   const L=[...P.values()].map(p=>(p.ban=isBanned(p.id,view),p.few=view==="total"&&p.n<TOTAL_MIN,p)).sort((a,b)=>(a.ban-b.ban)||(a.few-b.few)||(b.pt-a.pt));
   const ix=new Map(L.map((p,i)=>[p.id,i]));
   let rk=0;
@@ -381,7 +381,7 @@ function load(view){
   showUpdated(view,games);
   $("meta").innerHTML=(view==="total"?`<span>シーズン <b>${MONTHS.length}</b>(${ymLabel(MONTHS[MONTHS.length-1])}〜${ymLabel(latest)})</span>`:"")+
     `<span>集計期間 <b>${a.replace(/-/g,"/")} – ${b.replace(/-/g,"/")}</b></span><span>対局数 <b>${games.length}</b></span><span>参加者 <b>${D.length}</b>人</span>`+
-    (view==="total"&&D.some(d=>d.few)?`<span>${TOTAL_MIN}戦未満の<b>${D.filter(d=>d.few).length}</b>人は順位なし</span>`:"");
+    (view==="total"&&D.some(d=>d.few)?`<span>${TOTAL_MIN}戦未満の<b>${D.filter(d=>d.few).length}</b>人は表に出さない</span>`:"");
   $("tabMonth").setAttribute("aria-selected",view===latest);
   $("tabTotal").setAttribute("aria-selected",view==="total");
   $("month").value=view==="total"?"":view;
@@ -398,7 +398,7 @@ function prevChampion(view){
 function render(){
   const q=$("q").value.trim().toLowerCase();
   const champ=prevChampion(CUR),crown=d=>champ&&!d.ban&&d.id===champ.id?`<span class="crown" title="前回(${ymLabel(champ.ym)})のチャンピオン">👑</span>`:"";
-  let L=D.filter(d=>!q||d.name.toLowerCase().includes(q));
+  let L=D.filter(d=>!d.few&&(!q||d.name.toLowerCase().includes(q)));
   L=[...L].sort((a,b)=>(a.ban-b.ban)||(a.few-b.few)||(key==="ar"?a.ar-b.ar:b[key]-a[key]));
   if(!L.length){$("tb").innerHTML='<tr><td colspan="10" class="empty">該当するプレイヤーがいない</td></tr>';return}
   $("tb").innerHTML=L.map(d=>`<tr class="${d.ban?"banned":d.few?"":d.rank<=3?"top":""}">
@@ -574,7 +574,7 @@ function statTier(key,id){
 }
 function statRanking(key){
   const d=STAT_DEFS.find(x=>x.k===key); if(!d)return "";
-  const rows=D.map(p=>({name:p.name,i:p.i,ban:p.ban,few:p.few,me:p.i===VSP,x:playerStat(p.id)})).filter(r=>r.x).map(r=>({...r,v:d.val(r.x)}));
+  const rows=D.filter(p=>!p.few).map(p=>({name:p.name,i:p.i,ban:p.ban,few:p.few,me:p.i===VSP,x:playerStat(p.id)})).filter(r=>r.x).map(r=>({...r,v:d.val(r.x)}));
   const byName=(a,b)=>a.name.localeCompare(b.name,"ja");
   const has=rows.filter(r=>r.v!=null&&!r.ban&&!r.few).sort((a,b)=>(d.asc?a.v-b.v:b.v-a.v)||byName(a,b)),none=rows.filter(r=>r.v==null&&!r.ban&&!r.few).sort(byName),few=rows.filter(r=>r.few&&!r.ban).sort((a,b)=>a.v==null?1:b.v==null?-1:(d.asc?a.v-b.v:b.v-a.v)||byName(a,b)),ban=rows.filter(r=>r.ban).sort(byName);
   const same=(a,b)=>d.show(a.x)===d.show(b.x)&&Math.abs(a.v-b.v)<1e-12;
