@@ -11,18 +11,18 @@
 <style>
 :root{
   --bg:#f3f5f2;--surface:#ffffff;--ink:#17201b;--muted:#5d6b63;--line:#dde3dd;
-  --accent:#1d6a4f;--accent-soft:#e2efe8;--plus:#1d6a4f;--minus:#b23a2e;
+  --accent:#1d6a4f;--accent-soft:#e2efe8;--plus:#1d6a4f;--minus:#b23a2e;--good:#2459b3;
   --r1:#1d6a4f;--r2:#6fa58c;--r3:#c9b98f;--r4:#c7695c;
   --gold:#b58a1f;--stalk:#8dbb6a;--node:#5f8f45;--leaf:#4f9a4a;--silver:#7d8791;--bronze:#9a5f35;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
   --bg:#101512;--surface:#171e1a;--ink:#e6ece8;--muted:#98a69e;--line:#2a332e;
-  --accent:#6cc39c;--accent-soft:#1d2d25;--plus:#6cc39c;--minus:#f0877a;
+  --accent:#6cc39c;--accent-soft:#1d2d25;--plus:#6cc39c;--minus:#f0877a;--good:#7fa8f2;
   --r1:#4fae86;--r2:#3a6f58;--r3:#8a7d5c;--r4:#b25a4e;
   --gold:#e0b84a;--stalk:#4f7a3c;--node:#3a5c2c;--leaf:#3f7a3a;--silver:#aab3bb;--bronze:#cf8c5a;}}
 :root[data-theme="dark"]{color-scheme:dark;
   --bg:#101512;--surface:#171e1a;--ink:#e6ece8;--muted:#98a69e;--line:#2a332e;
-  --accent:#6cc39c;--accent-soft:#1d2d25;--plus:#6cc39c;--minus:#f0877a;
+  --accent:#6cc39c;--accent-soft:#1d2d25;--plus:#6cc39c;--minus:#f0877a;--good:#7fa8f2;
   --r1:#4fae86;--r2:#3a6f58;--r3:#8a7d5c;--r4:#b25a4e;
   --gold:#e0b84a;--stalk:#4f7a3c;--node:#3a5c2c;--leaf:#3f7a3a;--silver:#aab3bb;--bronze:#cf8c5a;}
 *{box-sizing:border-box}
@@ -123,6 +123,10 @@ dialog::backdrop{background:rgba(10,20,15,.45)}
 .st:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .st[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
 .st[aria-pressed="true"] .k{color:var(--accent)}
+.st.top10{border:2px solid var(--good);padding:8px 11px 7px}                  /* 項目ランキングで上位1割(青) */
+.st.top10 .k{color:var(--good)}
+.st.bot10{border:2px solid var(--minus);padding:8px 11px 7px}                 /* 項目ランキングで下位1割(赤) */
+.st.bot10 .k{color:var(--minus)}
 .st .k{font-size:12px;color:var(--muted);font-weight:700}
 .st .v{font-family:"IBM Plex Mono",monospace;font-size:20px;font-weight:600;line-height:1.35;color:var(--ink)}
 .st .c{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -510,7 +514,7 @@ function summaryTotal(){
 }
 /* 個人の詳細成績(いま表示している範囲(月・通算)の集計が読めていて、その人の分があるときだけ。無ければ null) */
 function playerStat(id){const M=SUMM_OK.get(CUR);return M&&M.get(id)||null}
-const STAT_NOTE="項目を押すと、その項目のランキングが下に出る(和了役一覧は、役ごとの和了回数が出る)。和了率・放銃率・副露率・立直率は、局数に対する割合。立直成功率・立直後放銃率は、立直の回数に対する割合。ツモ率・ロン率・面前和了率・副露和了率は、和了の回数に対する割合。最大スコアは、終局時の持ち点のうち、いちばん大きいもの。ドラの平均枚数は、和了1回あたりの枚数(総ドラは、表ドラ・裏ドラ・赤ドラの合計)。副露率は、副露した局の割合(1局に何回鳴いても1回)。";
+const STAT_NOTE="枠が青い項目は、その項目のランキングで上位1割に入っているもの。枠が赤い項目は、下位1割に入っているもの(順位の付く人の中で。BAN・10戦未満・値の無い人は数えない)。項目を押すと、その項目のランキングが下に出る(和了役一覧は、役ごとの和了回数が出る)。和了率・放銃率・副露率・立直率は、局数に対する割合。立直成功率・立直後放銃率は、立直の回数に対する割合。ツモ率・ロン率・面前和了率・副露和了率は、和了の回数に対する割合。最大スコアは、終局時の持ち点のうち、いちばん大きいもの。ドラの平均枚数は、和了1回あたりの枚数(総ドラは、表ドラ・裏ドラ・赤ドラの合計)。副露率は、副露した局の割合(1局に何回鳴いても1回)。";
 /* 詳細成績の項目。val=並べ替えに使う値(出せないときは null)、show=表示、sub=もとの件数、asc=ランキングで小さいほうを上にする */
 const ratio=(a,b)=>b?a/b:null;
 const avg2=(a,b,u)=>b?(a/b).toFixed(2)+u:"—";
@@ -539,12 +543,35 @@ const STAT_DEFS=[
   {k:"yaku",label:"和了役一覧",list:true,show:x=>"一覧を見る",sub:x=>`${x.yaku.size}種類 / 和了${x.agari}回`},
 ];
 /* 詳細成績のタイル(個人・チーム共通)。x=件数、sel=下に開いている項目。タイルを押すと、その項目のランキング(和了役一覧は役の一覧)が下に出る */
-function statTiles(x,sel){
-  return STAT_DEFS.map(d=>`<button type="button" class="st${d.list?" list":""}" data-st="${d.k}" aria-pressed="${d.k===sel}" title="${d.label}${d.list?"":"のランキング"}を見る"><span class="k">${d.label}</span><span class="v">${d.show(x)}</span><span class="c">${d.sub(x)}</span></button>`).join("");
+function statTiles(x,sel,id){
+  return STAT_DEFS.map(d=>{const t=id!=null&&!d.list?statTier(d.k,id):"";return `<button type="button" class="st${d.list?" list":""}${t?" "+t+"10":""}" data-st="${d.k}" aria-pressed="${d.k===sel}" title="${d.label}${d.list?"":"のランキング"}を見る${t==="top"?"(上位1割)":t==="bot"?"(下位1割)":""}"><span class="k">${d.label}</span><span class="v">${d.show(x)}</span><span class="c">${d.sub(x)}</span></button>`}).join("");
 }
 /* 項目 key のランキング。いま表示している月に対局があり、集計のある人が対象。
    値のない人(割る数が0)は、順位を付けずに最後に並べる。BANの人も順位を付けず、最後に並べる。同じ値は同じ順位 */
 let STATSEL=null;                                     // 下に開いている項目
+/* 項目 key で順位の付く人(値があり、BANでも10戦未満でもない)を、良い順に並べて順位を付ける。[{id,rank}] */
+function rankedStat(d){
+  const L=D.filter(p=>!p.ban&&!p.few).map(p=>({id:p.id,name:p.name,x:playerStat(p.id)})).filter(r=>r.x).map(r=>({...r,v:d.val(r.x)})).filter(r=>r.v!=null)
+    .sort((a,b)=>(d.asc?a.v-b.v:b.v-a.v)||a.name.localeCompare(b.name,"ja"));
+  let rank=0;
+  L.forEach((r,i)=>{if(!i||!(d.show(r.x)===d.show(L[i-1].x)&&Math.abs(r.v-L[i-1].v)<1e-12))rank=i+1;r.rank=rank});
+  return L;
+}
+/* その人が項目 key で上位1割("top")・下位1割("bot")に入っているか。どちらでもなければ ""。
+   1割の人数は、順位の付く人数の1割(切り捨て。最低1人)。上位は順位がその人数以内、下位は自分より悪い人がその人数未満。
+   同じ値は同じ扱い。上位と下位の両方に当たる(人数が少ない)ときは上位を優先 */
+const TIER=new Map();                                   // 範囲(月・通算)+項目 → プレイヤーID → "top"/"bot"
+function statTier(key,id){
+  const d=STAT_DEFS.find(x=>x.k===key); if(!d||d.list)return "";
+  const k=CUR+"|"+key;
+  if(!TIER.has(k)){
+    const L=rankedStat(d),n=L.length,lim=Math.max(1,Math.floor(n*0.1)),M=new Map();
+    if(n>=2) L.forEach(r=>{const worse=L.filter(o=>(d.asc?o.v-r.v:r.v-o.v)>1e-12).length;
+      if(r.rank<=lim)M.set(r.id,"top"); else if(worse<lim)M.set(r.id,"bot")});
+    TIER.set(k,M);
+  }
+  return TIER.get(k).get(id)||"";
+}
 function statRanking(key){
   const d=STAT_DEFS.find(x=>x.k===key); if(!d)return "";
   const rows=D.map(p=>({name:p.name,i:p.i,ban:p.ban,few:p.few,me:p.i===VSP,x:playerStat(p.id)})).filter(r=>r.x).map(r=>({...r,v:d.val(r.x)}));
@@ -584,7 +611,7 @@ function renderStat(){
   $("secStat").hidden=!x&&!pending;
   if(!x){$("stgrid").innerHTML="";$("strank").hidden=true;if(pending){$("stsub").textContent="読み込み中…";$("stnote").textContent=""}return}
   $("stsub").textContent=statScope(x,p.n);
-  $("stgrid").innerHTML=statTiles(x,STATSEL);
+  $("stgrid").innerHTML=statTiles(x,STATSEL,p.id);
   $("stnote").textContent=STAT_NOTE;
   showRanking();
 }
