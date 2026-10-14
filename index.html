@@ -158,7 +158,11 @@ dialog::backdrop{background:rgba(10,20,15,.45)}
 /* 詳細成績: 項目が増えたので、タイルを少し詰める。長い項目名は折り返す */
 .st .k{line-height:1.35}
 .st.list .v{font-family:inherit;font-size:15px;font-weight:700;color:var(--accent);line-height:1.8}
-.srt.yk td.l{font-weight:700}
+.ykgrid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:6px}
+.ykgrid li{display:flex;justify-content:space-between;align-items:baseline;gap:6px;padding:6px 8px;font-size:13.5px;border:1px solid var(--line);border-radius:6px}
+.ykgrid li b{font-weight:700;overflow-wrap:anywhere}
+.ykgrid li span{font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ykgrid li.empty{grid-column:1/-1;justify-content:center;color:var(--muted)}
 .srt .pname{max-width:none;border-bottom:0;font-weight:700}
 .srt td.rank .banmark{font-size:10px;padding:1px 4px}
 /* 相性表の説明(?のボタンで開閉) */
@@ -590,8 +594,8 @@ function yakuList(){
   const order=new Map(((SUMM_OK.get(CUR)||{}).yakuNames||[]).map((n,i)=>[n,i])),pos=n=>order.has(n)?order.get(n):1e9;
   const list=[...x.yaku].sort((a,b)=>b[1]-a[1]||pos(a[0])-pos(b[0]));
   return `<div class="srh"><b>和了役一覧</b><span>多い順・${list.length}種類・和了${x.agari}回</span><button type="button" class="srclose" data-stclose aria-label="和了役一覧を閉じる">閉じる</button></div>
-<div class="dtbox"><table class="vs srt yk"><thead><tr><th class="l">役</th><th>和了回数</th></tr></thead><tbody>${
-  list.length?list.map(([n,c])=>`<tr><td class="l">${esc(n)}</td><td class="num v">${c}回</td></tr>`).join(""):'<tr><td colspan="2" class="empty">和了がない</td></tr>'}</tbody></table></div>`;
+<ul class="ykgrid">${
+  list.length?list.map(([n,c])=>`<li><b>${esc(n)}</b><span>${c}回</span></li>`).join(""):'<li class="empty">和了がない</li>'}</ul>`;
 }
 /* 下の欄を、いま選んでいる項目に合わせて描き直す */
 function showRanking(){
