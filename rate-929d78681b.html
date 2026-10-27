@@ -93,19 +93,23 @@ footer{color:var(--muted);font-size:12px}
 
 <div class="tabs" role="tablist" aria-label="算出方法" id="tabs"></div>
 
-<section class="rules pc" aria-labelledby="pch">
-  <h2 id="pch">メリット・デメリット</h2>
+<section class="rules pc">
+  <details open>
+  <summary id="pch">メリット・デメリット</summary>
   <div class="pcgrid"><div><h3>メリット</h3><ul id="pros"></ul></div><div><h3>デメリット</h3><ul id="cons"></ul></div></div>
+  </details>
 </section>
 
 <section class="rules">
-  <h2>表示する人</h2>
+  <details open>
+  <summary>表示する人</summary>
   <ul id="rulelist">
     <li>通算で<b>10半荘以上</b>打っている人。</li>
     <li>今月を除いた<b>直近3か月</b>(<span id="win">—</span>)に、1半荘以上打っている人。</li>
     <li>不正によりBANされた人は表示しない。</li>
   </ul>
-  <p style="margin:0;font-size:13px;color:var(--muted)">レートの計算そのものには、表示しない人の対局も含めて全対局を使う。</p>
+  <p style="margin:10px 0 0;font-size:13px;color:var(--muted)">レートの計算そのものには、表示しない人の対局も含めて全対局を使う。</p>
+  </details>
 </section>
 
 <section class="rules">
@@ -396,6 +400,10 @@ function select(k){
     .sort((a,b)=>b.rate-a.rate).map((d,i)=>({...d,rank:i+1}));
   render();
 }
+/* 説明欄の開閉は、この端末で覚えておく */
+document.querySelectorAll("section.rules details").forEach((d,i)=>{const key="monoqlo-rate-open:"+i;
+  try{const v=localStorage.getItem(key);if(v!==null)d.open=v==="1"}catch(e){}
+  d.addEventListener("toggle",()=>{try{localStorage.setItem(key,d.open?"1":"0")}catch(e){}})});
 $("tabs").innerHTML=METHODS.map(m=>`<button type="button" class="tab" role="tab" data-k="${m.k}" aria-selected="false">${m.label}${m.sub?`<small>${m.sub}</small>`:""}</button>`).join("");
 $("tabs").addEventListener("click",e=>{const b=e.target.closest(".tab");if(b)select(b.dataset.k)});
 select(location.hash.slice(1));
