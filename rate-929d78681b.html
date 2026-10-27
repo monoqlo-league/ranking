@@ -76,6 +76,10 @@ footer{color:var(--muted);font-size:12px}
 .tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .tab small{font-weight:500;opacity:.8;margin-left:4px}
 .method p{margin:0;font-size:14px}
+.pcgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px 20px}
+.pc h3{font-size:13px;margin:0 0 4px;font-weight:700}
+.pc .pcgrid>div:first-child h3{color:var(--plus)}
+.pc .pcgrid>div:last-child h3{color:var(--minus)}
 </style>
 </head>
 <body>
@@ -88,6 +92,11 @@ footer{color:var(--muted);font-size:12px}
 <div class="notice">試験公開中のページ。数値や算出方法は今後変わることがある。このURLは希望者にだけ配布しているので、ほかの場所には貼らないでほしい。</div>
 
 <div class="tabs" role="tablist" aria-label="算出方法" id="tabs"></div>
+
+<section class="rules pc" aria-labelledby="pch">
+  <h2 id="pch">メリット・デメリット</h2>
+  <div class="pcgrid"><div><h3>メリット</h3><ul id="pros"></ul></div><div><h3>デメリット</h3><ul id="cons"></ul></div></div>
+</section>
 
 <section class="rules">
   <h2>表示する人</h2>
@@ -355,6 +364,7 @@ const METHODS=[
   </ul>`},
 ];
 
+const PC={"tenhou": [["4人の着順をそのまま点数(+30/+10/−10/−30)にするので、仕組みが分かりやすい", "強い卓で勝つほど多く上がり、弱い卓で負けるほど多く下がる", "打数が増えるほど動きが小さくなり、短期の上振れ・下振れに強い(5方式でいちばん安定)", "天鳳で見慣れた数字の感覚で読める"], ["打った順に1半荘ずつ反映するため、序盤の成績が長く残る(打ち始めに勝った人は高いまま、負けた人は低いまま固まりやすい)", "200戦を超えると1半荘で±6程度しか動かず、最近の調子が反映されにくい", "打数の少ない人の値は、まだ当てにならない"]], "elo": [["何戦目でも同じ幅で動くので、最近の調子がすぐ反映される", "2人ずつの勝ち負けに分けるだけの単純な計算"], ["直近の成績に引っぱられ、短期の上振れ・下振れで順位が大きく動く(5方式でいちばん不安定)", "打数の少ない人と多い人を同じ重みで扱うため、少ない打数の上位が当てにならない", "着順を2人ずつの勝ち負けに分けるので、「4人の中で何位か」という麻雀の形とは少しずれる"]], "glicko": [["「どれだけ確かか」(RD)を持ち、打数の少ない人は大きく、多い人は小さく動く", "しばらく打たなかった人は確かさが下がり、復帰後に早く今の実力へ追いつく", "月ごとにまとめて計算するので、月内の対局の順番に左右されない"], ["1か月単位でしか更新されないので、月の途中の値は暫定", "打数の少ない人が極端な値(上位・下位)になりやすい", "着順を2人ずつの勝ち負けに分けて扱う"]], "ts": [["4人の着順をそのまま扱う(多人数戦向けに作られた方法)", "実力の推定 μ と不確かさ σ を持ち、表の値(μ−3σ)は打数の少ない人を低めに出すので、たまたま勝った少数打数の人が上位に来にくい", "短期の上振れ・下振れに比較的強い"], ["計算が複雑で、なぜその値になったか説明しにくい", "打数の少ない人は実力があっても低く出る(打つほど上がる性質がある)", "点数の幅が狭く(20〜25前後)、天鳳のような直感的な数字ではない"]], "os": [["4人の着順をそのまま扱う(着順の確率モデル Plackett-Luce)", "TrueSkill と同じく、表の値(μ−3σ)は打数の少ない人を低めに出す", "TrueSkill より計算が単純で、仕組みが公開されている"], ["打数の少ない人は実力があっても低く出る(打つほど上がる性質がある)", "TrueSkill に比べると、1半荘の着順にやや敏感", "点数の幅が狭く、天鳳のような直感的な数字ではない"]]};
 let ROWS=[],DATA=null,M1="先月末",M2="先々月末",CURM=METHODS[0];
 function render(){
   const q=$("q").value.trim().toLowerCase(),dp=CURM.dp,fmt=v=>v.toFixed(dp);
@@ -375,7 +385,7 @@ const CACHE=new Map();
 function select(k){
   CURM=METHODS.find(m=>m.k===k)||METHODS[0];
   document.querySelectorAll("#tabs .tab").forEach(b=>b.setAttribute("aria-selected",b.dataset.k===CURM.k));
-  $("msum").textContent=`算出基準(${CURM.label})`;$("method").innerHTML=CURM.html;$("h0").textContent=CURM.col;
+  $("msum").textContent=`算出基準(${CURM.label})`;$("pch").textContent=`${CURM.label}のメリット・デメリット`;$("pros").innerHTML=PC[CURM.k][0].map(x=>`<li>${x}</li>`).join("");$("cons").innerHTML=PC[CURM.k][1].map(x=>`<li>${x}</li>`).join("");$("method").innerHTML=CURM.html;$("h0").textContent=CURM.col;
   try{history.replaceState(null,"",CURM.k===METHODS[0].k?location.pathname:"#"+CURM.k)}catch(e){}
   if(!DATA) return;
   const {G,cur,S,bans,win}=DATA;
