@@ -67,6 +67,15 @@ td.num{font-family:"IBM Plex Mono",monospace;font-size:14px}
 tbody tr:hover td{background:var(--accent-soft)}
 .empty{text-align:center;color:var(--muted);padding:28px}
 footer{color:var(--muted);font-size:12px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px}
+.tab{all:unset;cursor:pointer;padding:7px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-size:14px;font-weight:700;color:var(--muted)}
+.tab:hover{color:var(--accent);border-color:var(--accent)}
+.tab[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+:root[data-theme="dark"] .tab[aria-selected="true"]{color:#0d1a14}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .tab[aria-selected="true"]{color:#0d1a14}}
+.tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tab small{font-weight:500;opacity:.8;margin-left:4px}
+.method p{margin:0;font-size:14px}
 </style>
 </head>
 <body>
@@ -77,6 +86,8 @@ footer{color:var(--muted);font-size:12px}
   <div class="meta" id="meta"><span>読み込み中…</span></div>
 </header>
 <div class="notice">試験公開中のページ。数値や算出方法は今後変わることがある。このURLは希望者にだけ配布しているので、ほかの場所には貼らないでほしい。</div>
+
+<div class="tabs" role="tablist" aria-label="算出方法" id="tabs"></div>
 
 <section class="rules">
   <h2>表示する人</h2>
@@ -90,20 +101,9 @@ footer{color:var(--muted);font-size:12px}
 
 <section class="rules">
   <details open>
-  <summary>算出基準</summary>
-  <ul>
-    <li><b>天鳳のレーティングの計算方法に準拠</b>している。変えているのは、試合数による補正の値だけ。</li>
-    <li>1半荘ごとの変動:</li>
-  </ul>
-  <div class="formula">変動 = 試合数補正 × (順位点 + (卓の平均R − 自分のR) ÷ 40)</div>
-  <ul>
-    <li>順位点は 1位 +30 / 2位 +10 / 3位 −10 / 4位 −30。初期値は 1500。</li>
-    <li>卓の平均R は同卓4人のレートの平均。1500 未満のときは 1500 として計算する。</li>
-    <li>試合数補正: <span class="changed">1 − 試合数 × 0.004(200試合以降は 0.2)</span>。試合数は、その半荘より前に打った数。<br>
-      天鳳は「1 − 試合数 × 0.002(400試合以降は 0.2)」。このリーグは1人あたりの打数が天鳳より少ないため、補正が下限に届くまでを <b>400 → 200試合</b> に縮めている。</li>
-    <li>全期間の対局を、終局時刻の順に1半荘ずつ反映する。同卓4人の変動は、対局前のレートで計算してから同時に反映する。</li>
-    <li>「前月末比」「先々月末比」は、それぞれ先月・先々月の最終対局まで反映した時点のレートとの差。その時点でまだ対局が無かった人は「—」。</li>
-  </ul>
+  <summary id="msum">算出基準</summary>
+  <div class="method" id="method"></div>
+  <ul style="margin-top:10px"><li id="diffnote">「前月末比」「先々月末比」は、それぞれ先月・先々月の最終対局まで反映した時点の値との差。その時点でまだ対局が無かった人は「—」。</li></ul>
   </details>
 </section>
 
@@ -113,11 +113,11 @@ footer{color:var(--muted);font-size:12px}
 </div>
 <div class="tablebox">
 <table>
-<thead><tr><th style="text-align:center">順位</th><th class="l">プレイヤー</th><th>レート</th><th id="h1" title="先月末時点のレートとの差">前月末比</th><th id="h2" title="先々月末時点のレートとの差">先々月末比</th><th>半荘数</th><th>平均順位</th><th>着順分布</th></tr></thead>
+<thead><tr><th style="text-align:center">順位</th><th class="l">プレイヤー</th><th id="h0">レート</th><th id="h1" title="先月末時点のレートとの差">前月末比</th><th id="h2" title="先々月末時点のレートとの差">先々月末比</th><th>半荘数</th><th>平均順位</th><th>着順分布</th></tr></thead>
 <tbody id="tb"><tr><td colspan="8" class="empty">読み込み中…</td></tr></tbody>
 </table>
 </div>
-<footer>順位はレートの高い順。データはPTランキングと同じ対局記録(非表示の対局は除く)。</footer>
+<footer>順位は、選んでいる算出方法の値の高い順。データはPTランキングと同じ対局記録(非表示の対局は除く)。</footer>
 </div>
 
 <script>
@@ -201,12 +201,15 @@ async function loadBans(){
   return B;
 }
 
-/* ---------- レーティング(天鳳方式・試合数補正だけ N_FULL 試合で下限) ---------- */
+/* ---------- 算出方法 ----------
+   どの方法も、全期間の対局を終局時刻の順に使う。until(YYYYMM)を渡すと、その月より前の対局だけで計算する(月末時点の値) */
+const use=(games,until)=>until?games.filter(g=>g.ym<until):games;
+
+/* 1. 天鳳方式(試合数補正だけ N_FULL 試合で下限) */
 const factor=n=>Math.max(FLOOR,1-n*(1-FLOOR)/N_FULL);
-function rate(games,until){
+function tenhou(games,until){
   const R=new Map(),C=new Map();
-  for(const g of games){
-    if(until&&g.ym>=until) continue;
+  for(const g of use(games,until)){
     const ids=g.seats.map(s=>s[0]),r=ids.map(i=>R.has(i)?R.get(i):1500);
     const avg=Math.max(1500,(r[0]+r[1]+r[2]+r[3])/4);
     const d=ids.map((p,k)=>factor(C.get(p)||0)*(BASE[k]+(avg-r[k])/40));
@@ -214,19 +217,178 @@ function rate(games,until){
   }
   return R;
 }
+/* 2. Elo(同卓4人を6組の1対1とみなす。K=10、4人同時に更新) */
+function elo(games,until){
+  const R=new Map(),K=10;
+  for(const g of use(games,until)){
+    const ids=g.seats.map(s=>s[0]),r=ids.map(i=>R.has(i)?R.get(i):1500),d=[0,0,0,0];
+    for(let a=0;a<4;a++)for(let b=0;b<4;b++){if(a===b)continue;const e=1/(1+10**((r[b]-r[a])/400));d[a]+=K*((a<b?1:0)-e)}
+    ids.forEach((p,k)=>R.set(p,r[k]+d[k]));
+  }
+  return R;
+}
+/* 3. Glicko-2(1か月を1つの評価期間。相手3人との勝ち負けとして扱う。τ=0.5、初期RD=350) */
+function glicko(games,until){
+  const SC=173.7178,TAU=0.5,GR=new Map(),G=use(games,until);
+  const gf=phi=>1/Math.sqrt(1+3*phi*phi/(Math.PI*Math.PI));
+  const E=(mu,mj,pj)=>1/(1+Math.exp(-gf(pj)*(mu-mj)));
+  const months=[...new Set(G.map(g=>g.ym))].sort();
+  for(const ym of months){
+    const res=new Map();
+    for(const g of G){ if(g.ym!==ym) continue;
+      const ids=g.seats.map(s=>s[0]);
+      for(const p of ids) if(!GR.has(p)) GR.set(p,[0,350/SC,0.06]);
+      for(let a=0;a<4;a++)for(let b=0;b<4;b++){ if(a===b)continue; if(!res.has(ids[a]))res.set(ids[a],[]); res.get(ids[a]).push([ids[b],a<b?1:0]) }
+    }
+    const snap=new Map([...GR].map(([p,v])=>[p,v.slice()]));
+    for(const [p,[mu,phi,sig]] of snap){
+      const Rs=res.get(p);
+      if(!Rs){GR.get(p)[1]=Math.sqrt(phi*phi+sig*sig);continue}
+      let vi=0,sm=0;
+      for(const [j,sc] of Rs){const [mj,pj]=snap.get(j),e=E(mu,mj,pj);vi+=gf(pj)**2*e*(1-e);sm+=gf(pj)*(sc-e)}
+      const v=1/vi,dlt=v*sm,a=Math.log(sig*sig),eps=1e-6;
+      const f=x=>{const ex=Math.exp(x);return ex*(dlt*dlt-phi*phi-v-ex)/(2*(phi*phi+v+ex)**2)-(x-a)/(TAU*TAU)};
+      let A=a,B;
+      if(dlt*dlt>phi*phi+v) B=Math.log(dlt*dlt-phi*phi-v);
+      else{let k=1;while(f(a-k*TAU)<0)k++;B=a-k*TAU}
+      let fA=f(A),fB=f(B);
+      while(Math.abs(B-A)>eps){const C=A+(A-B)*fA/(fB-fA),fC=f(C);if(fC*fB<=0){A=B;fA=fB}else fA/=2;B=C;fB=fC}
+      const ns=Math.exp(A/2),ps=Math.sqrt(phi*phi+ns*ns),nphi=1/Math.sqrt(1/(ps*ps)+1/v);
+      GR.set(p,[mu+nphi*nphi*sm,nphi,ns]);
+    }
+  }
+  return new Map([...GR].map(([p,v])=>[p,1500+SC*v[0]]));
+}
+/* 4. TrueSkill(4人の着順をそのまま扱う。引き分けなし。μ=25、σ=25/3、β=σ/2、τ=σ/100。値は μ−3σ) */
+function erfc(x){const z=Math.abs(x),t=1/(1+0.5*z);
+  const r=t*Math.exp(-z*z-1.26551223+t*(1.00002368+t*(0.37409196+t*(0.09678418+t*(-0.18628806+t*(0.27886807+t*(-1.13520398+t*(1.48851587+t*(-0.82215223+t*0.17087277)))))))));
+  return x>=0?r:2-r}
+const pdf=x=>Math.exp(-x*x/2)/Math.sqrt(2*Math.PI),cdf=x=>0.5*erfc(-x/Math.SQRT2);
+const GS=(pi=0,tau=0)=>({pi,tau}),mv=(m,v)=>GS(1/v,m/v),gmul=(a,b)=>GS(a.pi+b.pi,a.tau+b.tau),gdiv=(a,b)=>GS(a.pi-b.pi,a.tau-b.tau),gm=a=>a.tau/a.pi,gv=a=>1/a.pi;
+function trueskill(games,until){
+  const MU0=25,SIG0=25/3,BETA=SIG0/2,TAUD=SIG0/100,TS=new Map(),get=p=>TS.get(p)||[MU0,SIG0];
+  for(const g of use(games,until)){
+    const ids=g.seats.map(s=>s[0]),n=4;
+    const P=ids.map(p=>{const [m,s]=get(p);return mv(m,s*s+TAUD*TAUD+BETA*BETA)});
+    const up=[0,1,2].map(()=>[GS(),GS()]),T=[GS(),GS(),GS()];
+    const marg=i=>{let x=P[i];for(let j=0;j<n-1;j++){if(j===i)x=gmul(x,up[j][0]);if(j+1===i)x=gmul(x,up[j][1])}return x};
+    for(let it=0;it<30;it++){
+      let ch=0;
+      for(const j of [0,1,2,1,0]){
+        const qa=gdiv(marg(j),up[j][0]),qb=gdiv(marg(j+1),up[j][1]);
+        const cm=gm(qa)-gm(qb),cv=gv(qa)+gv(qb),sv=Math.sqrt(cv),t=cm/sv,V=pdf(t)/Math.max(cdf(t),1e-300),W=V*(V+t);
+        const nT=gdiv(mv(cm+sv*V,cv*(1-W)),mv(cm,cv));
+        ch=Math.max(ch,Math.abs(nT.pi-T[j].pi),Math.abs(nT.tau-T[j].tau));T[j]=nT;
+        if(T[j].pi>1e-12){const tm=gm(T[j]),tv=gv(T[j]);up[j][0]=mv(tm+gm(qb),tv+gv(qb));up[j][1]=mv(gm(qa)-tm,gv(qa)+tv)}
+      }
+      if(ch<1e-7)break;
+    }
+    const nw=ids.map((p,i)=>{
+      let msg=GS();for(let j=0;j<n-1;j++){if(j===i)msg=gmul(msg,up[j][0]);if(j+1===i)msg=gmul(msg,up[j][1])}
+      const [m,s]=get(p),prior=mv(m,s*s+TAUD*TAUD);
+      if(msg.pi>0) msg=mv(gm(msg),gv(msg)+BETA*BETA);
+      const post=gmul(prior,msg);return [gm(post),Math.sqrt(gv(post))]});
+    ids.forEach((p,i)=>TS.set(p,nw[i]));
+  }
+  return new Map([...TS].map(([p,[m,s]])=>[p,m-3*s]));
+}
+/* 5. OpenSkill(Weng-Lin・Plackett-Luce。μ=25、σ=25/3、β=25/6、τ=25/300。値は μ−3σ) */
+function openskill(games,until){
+  const MU0=25,SIG0=25/3,B=25/6,TU=25/300,KAP=1e-4,OS=new Map();
+  for(const g of use(games,until)){
+    const ids=g.seats.map(s=>s[0]);
+    for(const p of ids){const [m,s]=OS.get(p)||[MU0,SIG0];OS.set(p,[m,Math.sqrt(s*s+TU*TU)])}
+    const C=Math.sqrt(ids.reduce((x,p)=>x+OS.get(p)[1]**2+B*B,0));
+    const ex=ids.map(p=>Math.exp(OS.get(p)[0]/C)),S=[0,1,2,3].map(q=>ex.slice(q).reduce((a,b)=>a+b,0));
+    const nw=ids.map((p,i)=>{const [mu,sg]=OS.get(p);let om=0,de=0;const gam=sg/C;
+      for(let q=0;q<=i;q++){const pr=ex[i]/S[q];om+=(sg*sg/C)*((q===i?1:0)-pr);de+=gam*(sg*sg/(C*C))*pr*(1-pr)}
+      return [mu+om,sg*Math.sqrt(Math.max(1-de,KAP))]});
+    ids.forEach((p,i)=>OS.set(p,nw[i]));
+  }
+  return new Map([...OS].map(([p,[m,s]])=>[p,m-3*s]));
+}
 
-let ROWS=[],M1="先月末",M2="先々月末";
+const METHODS=[
+ {k:"tenhou",label:"天鳳方式",sub:"N=200",fn:tenhou,dp:0,col:"レート",html:`
+  <ul>
+    <li><b>天鳳のレーティングの計算方法に準拠</b>している。変えているのは、試合数による補正の値だけ。</li>
+    <li>1半荘ごとの変動:</li>
+  </ul>
+  <div class="formula">変動 = 試合数補正 × (順位点 + (卓の平均R − 自分のR) ÷ 40)</div>
+  <ul>
+    <li>順位点は 1位 +30 / 2位 +10 / 3位 −10 / 4位 −30。初期値は 1500。</li>
+    <li>卓の平均R は同卓4人のレートの平均。1500 未満のときは 1500 として計算する。</li>
+    <li>試合数補正: <span class="changed">1 − 試合数 × 0.004(200試合以降は 0.2)</span>。試合数は、その半荘より前に打った数。<br>
+      天鳳は「1 − 試合数 × 0.002(400試合以降は 0.2)」。このリーグは1人あたりの打数が天鳳より少ないため、補正が下限に届くまでを <b>400 → 200試合</b> に縮めている。</li>
+    <li>全期間の対局を、終局時刻の順に1半荘ずつ反映する。同卓4人の変動は、対局前のレートで計算してから同時に反映する。</li>
+  </ul>`},
+ {k:"elo",label:"Elo",fn:elo,dp:0,col:"レート",html:`
+  <ul>
+    <li>チェスなどで使われる Elo レーティング。同卓4人の対局を、<b>6組の1対1の勝ち負け</b>とみなして計算する(上の着順の人が勝ち)。</li>
+  </ul>
+  <div class="formula">変動 = K × Σ(勝ち負け − 期待勝率)  期待勝率 = 1 ÷ (1 + 10^((相手のR − 自分のR) ÷ 400))</div>
+  <ul>
+    <li>K = 10、初期値は 1500。試合数による補正はない(何戦目でも同じ幅で動く)。</li>
+    <li>全期間の対局を、終局時刻の順に1半荘ずつ反映する。同卓4人の変動は、対局前のレートで計算してから同時に反映する。</li>
+    <li>直近の成績に敏感で、短期の上振れ・下振れで順位が動きやすい。</li>
+  </ul>`},
+ {k:"glicko",label:"Glicko-2",fn:glicko,dp:0,col:"レート",html:`
+  <ul>
+    <li>Elo を改良した Glicko-2。レートに加えて<b>「どれだけ確かか」(RD)</b>を持ち、対局数が少ない人ほど大きく動く。</li>
+    <li><b>1か月を1つの評価期間</b>とし、その月の対局をまとめて反映する。各対局は、相手3人との勝ち負け(上の着順が勝ち)として扱う。</li>
+    <li>初期値はレート 1500・RD 350、変動しやすさ σ=0.06、τ=0.5。打たなかった月は RD が少し広がる。</li>
+    <li>月単位の更新なので、今月の値は今月の対局がそろうほど確かになる。対局数が少ない人は極端な値になりやすい。</li>
+  </ul>`},
+ {k:"ts",label:"TrueSkill",fn:trueskill,dp:1,col:"μ−3σ",html:`
+  <ul>
+    <li>Microsoft が Xbox の対戦マッチングのために作った TrueSkill。<b>4人の着順をそのまま</b>使って、実力の推定値 μ と不確かさ σ を更新する。</li>
+    <li>初期値は μ=25、σ=25/3。成績のぶれ β=σ/2、実力の揺らぎ τ=σ/100、引き分けなし。</li>
+    <li>表の値は <b>μ − 3σ</b>(「実力はほぼ確実にこれ以上」という控えめな値)。対局数が少ない人は σ が大きいため低く出る。</li>
+    <li>全期間の対局を、終局時刻の順に1半荘ずつ反映する。</li>
+  </ul>`},
+ {k:"os",label:"OpenSkill",fn:openskill,dp:1,col:"μ−3σ",html:`
+  <ul>
+    <li>TrueSkill と同じ考え方の公開アルゴリズム OpenSkill(Weng-Lin 方式・Plackett-Luce モデル)。<b>4人の着順をそのまま</b>使って μ と σ を更新する。</li>
+    <li>初期値は μ=25、σ=25/3。β=25/6、τ=25/300。</li>
+    <li>表の値は <b>μ − 3σ</b>。対局数が少ない人ほど低く出る。</li>
+    <li>全期間の対局を、終局時刻の順に1半荘ずつ反映する。</li>
+  </ul>`},
+];
+
+let ROWS=[],DATA=null,M1="先月末",M2="先々月末",CURM=METHODS[0];
 function render(){
-  const q=$("q").value.trim().toLowerCase();
+  const q=$("q").value.trim().toLowerCase(),dp=CURM.dp,fmt=v=>v.toFixed(dp);
   const L=ROWS.filter(d=>!q||d.name.toLowerCase().includes(q));
   if(!L.length){$("tb").innerHTML='<tr><td colspan="8" class="empty">該当するプレイヤーがいない</td></tr>';return}
   $("tb").innerHTML=L.map(d=>{
-    const ch=(old,lab)=>old==null?`<span class="zero" title="${lab}時点で対局なし">—</span>`:(()=>{const v=Math.round(d.rate)-Math.round(old);return `<span class="${v>0?"plus":v<0?"minus":"zero"}" title="${lab}時点 ${Math.round(old)}">${v>0?"+":v<0?"−":"±"}${Math.abs(v)}</span>`})();
+    const ch=(old,lab)=>{if(old==null)return `<span class="zero" title="${lab}時点で対局なし">—</span>`;
+      const v=+(d.rate.toFixed(dp))-+(old.toFixed(dp)),z=Math.abs(v)<1e-9;
+      return `<span class="${z?"zero":v>0?"plus":"minus"}" title="${lab}時点 ${fmt(old)}">${z?"±":v>0?"+":"−"}${Math.abs(v).toFixed(dp)}</span>`};
     return `<tr><td class="rank">${d.rank<=3?`<span class="medal m${d.rank}">${d.rank}</span>`:d.rank}</td>
-<td class="l name">${esc(d.name)}</td><td class="rate">${Math.round(d.rate)}</td><td class="num">${ch(d.prev,M1)}</td><td class="num">${ch(d.prev2,M2)}</td><td class="num">${d.n}</td><td class="num">${d.ar.toFixed(2)}</td>
+<td class="l name">${esc(d.name)}</td><td class="rate">${fmt(d.rate)}</td><td class="num">${ch(d.prev,M1)}</td><td class="num">${ch(d.prev2,M2)}</td><td class="num">${d.n}</td><td class="num">${d.ar.toFixed(2)}</td>
 <td><div class="bar">${d.r.map(c=>`<span style="width:${c/d.n*100}%"></span>`).join("")}</div><div class="counts">${d.r.join(" / ")}</div></td></tr>`}).join("");
 }
 $("q").addEventListener("input",render);
+
+/* 算出方法を選ぶ。結果は方法ごとに覚えておき、切り替えのたびに計算し直さない */
+const CACHE=new Map();
+function select(k){
+  CURM=METHODS.find(m=>m.k===k)||METHODS[0];
+  document.querySelectorAll("#tabs .tab").forEach(b=>b.setAttribute("aria-selected",b.dataset.k===CURM.k));
+  $("msum").textContent=`算出基準(${CURM.label})`;$("method").innerHTML=CURM.html;$("h0").textContent=CURM.col;
+  try{history.replaceState(null,"",CURM.k===METHODS[0].k?location.pathname:"#"+CURM.k)}catch(e){}
+  if(!DATA) return;
+  const {G,cur,S,bans,win}=DATA;
+  if(!CACHE.has(CURM.k)) CACHE.set(CURM.k,[CURM.fn(G),CURM.fn(G,cur),CURM.fn(G,prevYM(cur))]);
+  const [R,P,P2]=CACHE.get(CURM.k);
+  ROWS=[...S.values()].filter(s=>!bans.has(s.id)&&s.n>=MIN_GAMES&&s.w>0)
+    .map(s=>({...s,rate:R.get(s.id),prev:P.has(s.id)?P.get(s.id):null,prev2:P2.has(s.id)?P2.get(s.id):null,ar:(s.r[0]+2*s.r[1]+3*s.r[2]+4*s.r[3])/s.n}))
+    .sort((a,b)=>b.rate-a.rate).map((d,i)=>({...d,rank:i+1}));
+  render();
+}
+$("tabs").innerHTML=METHODS.map(m=>`<button type="button" class="tab" role="tab" data-k="${m.k}" aria-selected="false">${m.label}${m.sub?`<small>${m.sub}</small>`:""}</button>`).join("");
+$("tabs").addEventListener("click",e=>{const b=e.target.closest(".tab");if(b)select(b.dataset.k)});
+select(location.hash.slice(1));
 
 (async()=>{
   const [bans,list]=await Promise.all([loadBans(),listMonths()]);
@@ -239,17 +401,14 @@ $("q").addEventListener("input",render);
   const win=[];let x=cur;for(let i=0;i<WINDOW;i++){x=prevYM(x);win.push(x)}
   const lab=ym=>`${+ym.slice(0,4)}年${+ym.slice(4)}月`;
   $("win").textContent=`${lab(win[2])}〜${lab(win[0])}`;
-  const R=rate(G),P=rate(G,cur),P2=rate(G,prevYM(cur));  // P: 先月末時点、P2: 先々月末時点
   M1=`${+prevYM(cur).slice(4)}月末`;M2=`${+prevYM(prevYM(cur)).slice(4)}月末`;
   $("h1").textContent=`${M1}比`;$("h2").textContent=`${M2}比`;
   const S=new Map();
   for(const g of G) g.seats.forEach(([id,name],i)=>{let s=S.get(id);if(!s){s={id,name,n:0,w:0,r:[0,0,0,0]};S.set(id,s)}s.name=name;s.n++;s.r[i]++;if(win.includes(g.ym))s.w++});
-  ROWS=[...S.values()].filter(s=>!bans.has(s.id)&&s.n>=MIN_GAMES&&s.w>0)
-    .map(s=>({...s,rate:R.get(s.id),prev:P.has(s.id)?P.get(s.id):null,prev2:P2.has(s.id)?P2.get(s.id):null,ar:(s.r[0]+2*s.r[1]+3*s.r[2]+4*s.r[3])/s.n}))
-    .sort((a,b)=>b.rate-a.rate).map((d,i)=>({...d,rank:i+1}));
+  DATA={G,cur,S,bans,win};
+  select(CURM.k);
   const last=G[G.length-1].end;
   $("meta").innerHTML=`<span>集計期間 <b>${G[0].start.slice(0,10).replace(/-/g,"/")} – ${last.slice(0,10).replace(/-/g,"/")}</b></span><span>対局数 <b>${G.length}</b></span><span>表示 <b>${ROWS.length}</b>人(全${S.size}人)</span><span>最終対局 <b>${last.slice(0,16).replace(/-/g,"/")}</b></span>`;
-  render();
 })();
 </script>
 </body>
