@@ -204,6 +204,10 @@ dialog::backdrop{background:rgba(10,20,15,.45)}
 .past select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 tr.banned td{background:color-mix(in srgb,var(--minus) 7%,transparent);color:var(--muted)}
 tr.banned .pname{color:var(--muted)}
+tr.acct td{color:var(--muted)}
+tr.acct .pname{color:var(--muted)}
+.acctmark{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.02em;color:var(--surface);background:var(--muted);border-radius:4px;padding:1px 6px;white-space:nowrap}
+.srt td.rank .acctmark{font-size:10px;padding:1px 4px}
 .banmark{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--surface);background:var(--minus);border-radius:4px;padding:1px 6px}
 .empty{padding:24px;text-align:center;color:var(--muted)}
 footer{font-size:12px;color:var(--muted)}
@@ -258,7 +262,7 @@ footer{font-size:12px;color:var(--muted)}
 <tbody id="tb"><tr><td colspan="10" class="empty">読み込み中…</td></tr></tbody>
 </table>
 </div>
-<footer>順位は合計PTの高い順。見出しの「対局数」「平均PT」「平均順位」「トップ率」「連対率」「ラス回避率」を押すと並べ替えできる(順位列は合計PT順のまま)。プレイヤー名を押すと、成績(入賞記録・詳細成績・戦績・相性表)が開く。詳細成績は、牌譜の集計がある月だけに出る。通算の詳細成績は、集計のある月を足し合わせたもの。通算ランキングと、通算の詳細成績の項目ランキングには、10戦未満のプレイヤーを出さない。「BAN」はサーバー規約違反によりBANされたプレイヤーで、BANされた月以降と通算では成績はそのままに順位の対象外として最下位に表示する。</footer>
+<footer>順位は合計PTの高い順。見出しの「対局数」「平均PT」「平均順位」「トップ率」「連対率」「ラス回避率」を押すと並べ替えできる(順位列は合計PT順のまま)。プレイヤー名を押すと、成績(入賞記録・詳細成績・戦績・相性表)が開く。詳細成績は、牌譜の集計がある月だけに出る。通算の詳細成績は、集計のある月を足し合わせたもの。通算ランキングと、通算の詳細成績の項目ランキングには、10戦未満のプレイヤーを出さない。「BAN」はサーバー規約違反によりBANされたプレイヤーで、BANされた月以降と通算では成績はそのままに順位の対象外として最下位に表示する。「アカ変」はアカウントを変更したプレイヤーの元のアカウントで、通算でだけ成績はそのままに順位の対象外とし、BANの上に表示する(各月の順位はそのまま)。</footer>
 
 </div>
 
@@ -309,10 +313,13 @@ footer{font-size:12px;color:var(--muted)}
 const $=id=>document.getElementById(id);
 const f=(v,s)=>(v>0?"+":v<0?"−":"")+Math.abs(v).toFixed(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-let BANS=new Map(),D=[],key="pt",CUR=null,MONTHS=[],SEASONS=new Map(),TOTAL=[],AWARDS=new Map(),CHAMP=new Map();
+let BANS=new Map(),ACCTS=new Set(),D=[],key="pt",CUR=null,MONTHS=[],SEASONS=new Map(),TOTAL=[],AWARDS=new Map(),CHAMP=new Map();
 
 const TOTAL_MIN=10;                                   // 通算ランキングの対象になる最低対局数
 function isBanned(id,view){const b=BANS.get(id);return !!b&&(view==="total"||view>=b)}
+/* アカウント変更者(元のアカウント)。通算だけ順位の対象外にし、順位のある人の下・BANの上に置く */
+const isAcct=(id,view)=>view==="total"&&ACCTS.has(id);
+const ACCT_MARK='<span class="acctmark" title="アカウント変更のため、通算では順位の対象外">アカ変</span>';
 function compute(games,view){
   const P=new Map();
   for(const [,seats] of games){
@@ -326,10 +333,10 @@ function compute(games,view){
   }
   // BAN対象(BAN月以降・通算)は成績はそのまま、順位の対象外として最下位に置く
   // 通算は、対局数が TOTAL_MIN 未満の人を表から外す(ランキング・詳細成績の項目ランキングに出さない。順位も付けない)
-  const L=[...P.values()].map(p=>(p.ban=isBanned(p.id,view),p.few=view==="total"&&p.n<TOTAL_MIN,p)).sort((a,b)=>(a.ban-b.ban)||(a.few-b.few)||(b.pt-a.pt));
+  const L=[...P.values()].map(p=>(p.ban=isBanned(p.id,view),p.acct=!p.ban&&isAcct(p.id,view),p.few=view==="total"&&p.n<TOTAL_MIN,p)).sort((a,b)=>(a.ban-b.ban)||(a.acct-b.acct)||(a.few-b.few)||(b.pt-a.pt));
   const ix=new Map(L.map((p,i)=>[p.id,i]));
   let rk=0;
-  return L.map((p,i)=>{const n=p.n,r=p.r;return{i,id:p.id,ban:p.ban,few:p.few,rank:p.ban||p.few?null:++rk,name:p.name,pt:Math.round(p.pt*10)/10,n,r,
+  return L.map((p,i)=>{const n=p.n,r=p.r;return{i,id:p.id,ban:p.ban,acct:p.acct,few:p.few,rank:p.ban||p.acct||p.few?null:++rk,name:p.name,pt:Math.round(p.pt*10)/10,n,r,
     avg:p.pt/n,ar:(r[0]+2*r[1]+3*r[2]+4*r[3])/n,top:r[0]/n,ren:(r[0]+r[1])/n,avoid:1-r[3]/n,
     vs:[...p.vs].map(([o,h])=>[ix.get(o),h[0],Math.round(h[1]*10)/10,h[2],h[3]])}});
 }
@@ -401,12 +408,12 @@ function prevChampion(view){
 }
 function render(){
   const q=$("q").value.trim().toLowerCase();
-  const champ=prevChampion(CUR),crown=d=>champ&&!d.ban&&d.id===champ.id?`<span class="crown" title="前回(${ymLabel(champ.ym)})のチャンピオン">👑</span>`:"";
+  const champ=prevChampion(CUR),crown=d=>champ&&!d.ban&&!d.acct&&d.id===champ.id?`<span class="crown" title="前回(${ymLabel(champ.ym)})のチャンピオン">👑</span>`:"";
   let L=D.filter(d=>!d.few&&(!q||d.name.toLowerCase().includes(q)));
-  L=[...L].sort((a,b)=>(a.ban-b.ban)||(a.few-b.few)||(key==="ar"?a.ar-b.ar:b[key]-a[key]));
+  L=[...L].sort((a,b)=>(a.ban-b.ban)||(a.acct-b.acct)||(a.few-b.few)||(key==="ar"?a.ar-b.ar:b[key]-a[key]));
   if(!L.length){$("tb").innerHTML='<tr><td colspan="10" class="empty">該当するプレイヤーがいない</td></tr>';return}
-  $("tb").innerHTML=L.map(d=>`<tr class="${d.ban?"banned":d.few?"":d.rank<=3?"top":""}">
-<td class="rank">${d.ban?'<span class="banmark" title="サーバー規約違反によりBAN">BAN</span>':d.few?`<span title="${TOTAL_MIN}戦未満のため順位なし">—</span>`:d.rank<=3?`<span class="medal m${d.rank}">${d.rank}</span>`:d.rank}</td>
+  $("tb").innerHTML=L.map(d=>`<tr class="${d.ban?"banned":d.acct?"acct":d.few?"":d.rank<=3?"top":""}">
+<td class="rank">${d.ban?'<span class="banmark" title="サーバー規約違反によりBAN">BAN</span>':d.acct?ACCT_MARK:d.few?`<span title="${TOTAL_MIN}戦未満のため順位なし">—</span>`:d.rank<=3?`<span class="medal m${d.rank}">${d.rank}</span>`:d.rank}</td>
 <td class="l name"><button class="pname" data-i="${d.i}" title="${esc(d.name)} の相性表を見る">${crown(d)}${esc(d.name)}${crown(d)}</button></td>
 <td class="pt ${d.pt>=0?"plus":"minus"}">${f(d.pt,1)}</td>
 <td class="num">${d.n}</td>
@@ -518,7 +525,7 @@ function summaryTotal(){
 }
 /* 個人の詳細成績(いま表示している範囲(月・通算)の集計が読めていて、その人の分があるときだけ。無ければ null) */
 function playerStat(id){const M=SUMM_OK.get(CUR);return M&&M.get(id)||null}
-const STAT_NOTE="枠が青い項目は、その項目のランキングで上位1割に入っているもの。枠が赤い項目は、下位1割に入っているもの(順位の付く人の中で。BAN・10戦未満・値の無い人は数えない)。項目を押すと、その項目のランキングが下に出る(和了役一覧は、役ごとの和了回数が出る)。和了率・放銃率・副露率・立直率は、局数に対する割合。立直成功率・立直後放銃率は、立直の回数に対する割合。ツモ率・ロン率・面前和了率・副露和了率は、和了の回数に対する割合。最大スコアは、終局時の持ち点のうち、いちばん大きいもの。ドラの平均枚数は、和了1回あたりの枚数(総ドラは、表ドラ・裏ドラ・赤ドラの合計)。副露率は、副露した局の割合(1局に何回鳴いても1回)。";
+const STAT_NOTE="枠が青い項目は、その項目のランキングで上位1割に入っているもの。枠が赤い項目は、下位1割に入っているもの(順位の付く人の中で。BAN・アカ変・10戦未満・値の無い人は数えない)。項目を押すと、その項目のランキングが下に出る(和了役一覧は、役ごとの和了回数が出る)。和了率・放銃率・副露率・立直率は、局数に対する割合。立直成功率・立直後放銃率は、立直の回数に対する割合。ツモ率・ロン率・面前和了率・副露和了率は、和了の回数に対する割合。最大スコアは、終局時の持ち点のうち、いちばん大きいもの。ドラの平均枚数は、和了1回あたりの枚数(総ドラは、表ドラ・裏ドラ・赤ドラの合計)。副露率は、副露した局の割合(1局に何回鳴いても1回)。";
 /* 詳細成績の項目。val=並べ替えに使う値(出せないときは null)、show=表示、sub=もとの件数、asc=ランキングで小さいほうを上にする */
 const ratio=(a,b)=>b?a/b:null;
 const avg2=(a,b,u)=>b?(a/b).toFixed(2)+u:"—";
@@ -555,7 +562,7 @@ function statTiles(x,sel,id){
 let STATSEL=null;                                     // 下に開いている項目
 /* 項目 key で順位の付く人(値があり、BANでも10戦未満でもない)を、良い順に並べて順位を付ける。[{id,rank}] */
 function rankedStat(d){
-  const L=D.filter(p=>!p.ban&&!p.few).map(p=>({id:p.id,name:p.name,x:playerStat(p.id)})).filter(r=>r.x).map(r=>({...r,v:d.val(r.x)})).filter(r=>r.v!=null)
+  const L=D.filter(p=>!p.ban&&!p.acct&&!p.few).map(p=>({id:p.id,name:p.name,x:playerStat(p.id)})).filter(r=>r.x).map(r=>({...r,v:d.val(r.x)})).filter(r=>r.v!=null)
     .sort((a,b)=>(d.asc?a.v-b.v:b.v-a.v)||a.name.localeCompare(b.name,"ja"));
   let rank=0;
   L.forEach((r,i)=>{if(!i||!(d.show(r.x)===d.show(L[i-1].x)&&Math.abs(r.v-L[i-1].v)<1e-12))rank=i+1;r.rank=rank});
@@ -578,15 +585,15 @@ function statTier(key,id){
 }
 function statRanking(key){
   const d=STAT_DEFS.find(x=>x.k===key); if(!d)return "";
-  const rows=D.filter(p=>!p.few).map(p=>({name:p.name,i:p.i,ban:p.ban,few:p.few,me:p.i===VSP,x:playerStat(p.id)})).filter(r=>r.x).map(r=>({...r,v:d.val(r.x)}));
+  const rows=D.filter(p=>!p.few).map(p=>({name:p.name,i:p.i,ban:p.ban,acct:p.acct,few:p.few,me:p.i===VSP,x:playerStat(p.id)})).filter(r=>r.x).map(r=>({...r,v:d.val(r.x)}));
   const byName=(a,b)=>a.name.localeCompare(b.name,"ja");
-  const has=rows.filter(r=>r.v!=null&&!r.ban&&!r.few).sort((a,b)=>(d.asc?a.v-b.v:b.v-a.v)||byName(a,b)),none=rows.filter(r=>r.v==null&&!r.ban&&!r.few).sort(byName),few=rows.filter(r=>r.few&&!r.ban).sort((a,b)=>a.v==null?1:b.v==null?-1:(d.asc?a.v-b.v:b.v-a.v)||byName(a,b)),ban=rows.filter(r=>r.ban).sort(byName);
+  const has=rows.filter(r=>r.v!=null&&!r.ban&&!r.acct&&!r.few).sort((a,b)=>(d.asc?a.v-b.v:b.v-a.v)||byName(a,b)),none=rows.filter(r=>r.v==null&&!r.ban&&!r.acct&&!r.few).sort(byName),few=rows.filter(r=>r.few&&!r.ban&&!r.acct).sort((a,b)=>a.v==null?1:b.v==null?-1:(d.asc?a.v-b.v:b.v-a.v)||byName(a,b)),acct=rows.filter(r=>r.acct).sort(byName),ban=rows.filter(r=>r.ban).sort(byName);
   const same=(a,b)=>d.show(a.x)===d.show(b.x)&&Math.abs(a.v-b.v)<1e-12;
   let rank=0;
   const tr=(r,rk)=>`<tr class="${r.me?"me":""}"><td class="rank">${rk}</td><td class="l"><button type="button" class="pname" data-i="${r.i}">${esc(r.name)}</button></td><td class="num v">${d.show(r.x)}${d.nosub?"":`<small>${d.sub(r.x)}</small>`}</td>${d.nosub?"":`<td class="num c">${d.sub(r.x)}</td>`}</tr>`;
   return `<div class="srh"><b>${d.label}ランキング</b><span>${d.word||(d.asc?"低い順":"高い順")}・${rows.length}人</span><button type="button" class="srclose" data-stclose aria-label="ランキングを閉じる">閉じる</button></div>
 <div class="dtbox"><table class="vs srt"><thead><tr><th style="text-align:center">順位</th><th class="l">プレイヤー</th><th>${d.label}</th>${d.nosub?"":'<th class="c">件数</th>'}</tr></thead><tbody>${
-  has.map((r,i)=>{if(!i||!same(r,has[i-1]))rank=i+1;return tr(r,rank)}).join("")+none.map(r=>tr(r,"—")).join("")+few.map(r=>tr(r,"—")).join("")+ban.map(r=>tr(r,'<span class="banmark" title="サーバー規約違反によりBAN">BAN</span>')).join("")}</tbody></table></div>`;
+  has.map((r,i)=>{if(!i||!same(r,has[i-1]))rank=i+1;return tr(r,rank)}).join("")+none.map(r=>tr(r,"—")).join("")+few.map(r=>tr(r,"—")).join("")+acct.map(r=>tr(r,ACCT_MARK)).join("")+ban.map(r=>tr(r,'<span class="banmark" title="サーバー規約違反によりBAN">BAN</span>')).join("")}</tbody></table></div>`;
 }
 /* 和了役一覧。ウィンドウに出している人の、役ごとの和了回数。多い順(同じ回数は、CSVの列の順) */
 function yakuList(){
@@ -659,7 +666,7 @@ function renderVs(){
     b.classList.toggle("on",on);b.querySelector(".arrow").textContent=on&&VSDIR>0?"▲":"▼";
     b.closest("th").setAttribute("aria-sort",on?(VSDIR>0?"ascending":"descending"):"none")});
   $("vtb").innerHTML=V.map(([o,g,pt,w,rs])=>{const q=D[o],wr=w/g*100;return `<tr>
-<td class="l"><button class="oppbtn" data-i="${o}">${esc(q.name)}</button><span class="orank">${q.ban?"BAN":q.few?"—":q.rank+"位"}</span></td>
+<td class="l"><button class="oppbtn" data-i="${o}">${esc(q.name)}</button><span class="orank">${q.ban?"BAN":q.acct?"アカ変":q.few?"—":q.rank+"位"}</span></td>
 <td class="num">${g}</td>
 <td class="pt ${pt>=0?"plus":"minus"}">${f(pt,1)}</td>
 <td class="num ${pt>=0?"plus":"minus"}">${f(pt/g,2)}</td>
@@ -674,7 +681,7 @@ function openVs(i){
   renderAwards(p.id);
   renderGames(p);
   setHelp(false);                                    // 説明は、開くたびに閉じた状態から始める
-  $("dsub").innerHTML=`<span>総合 <b>${p.ban?"BAN":p.few?`—(${TOTAL_MIN}戦未満)`:p.rank+"位"}</b></span><span>合計PT <b class="${p.pt>=0?"plus":"minus"}">${f(p.pt,1)}</b></span><span>対局数 <b>${p.n}</b></span><span>対戦相手 <b>${p.vs.length}</b>人</span>`;
+  $("dsub").innerHTML=`<span>総合 <b>${p.ban?"BAN":p.acct?"アカ変(通算は順位の対象外)":p.few?`—(${TOTAL_MIN}戦未満)`:p.rank+"位"}</b></span><span>合計PT <b class="${p.pt>=0?"plus":"minus"}">${f(p.pt,1)}</b></span><span>対局数 <b>${p.n}</b></span><span>対戦相手 <b>${p.vs.length}</b>人</span>`;
   VSP=i;renderVs();
   renderStat();                                      // 詳細成績(その月の集計が読めていれば出る。まだなら、読めたときに出す)
   const view=CUR;summaryOf(view).then(()=>{if(CUR===view&&VSP===i&&dlg.open)renderStat()});
@@ -847,6 +854,16 @@ async function loadBans(){
     }
   }catch(e){console.warn("ban.csv",e)}
 }
+/* アカウント変更者リスト: account-change.csv(1列目=元のアカウント、2列目=変更月(記録用)、3列目=備考)。無ければ誰もいない */
+async function loadAccts(){
+  try{
+    const r=await fetchData("account-change.csv"); if(!r.ok) return;
+    for(const row of parseCSV(decode(await r.arrayBuffer()).replace(/^\uFEFF/,""))){
+      const m=(row[0]||"").match(/\[(\d+)\]|^\s*(\d+)\s*$/);
+      if(m) ACCTS.add(m[1]||m[2]);                       // 見出し行は数字が無いので読み飛ばされる
+    }
+  }catch(e){console.warn("account-change.csv",e)}
+}
 function rebuild(){
   MONTHS=[...SEASONS.keys()].sort().reverse();
   if(!MONTHS.length) return false;
@@ -860,7 +877,7 @@ function rebuild(){
   return true;
 }
 (async()=>{
-  await loadBans();
+  await Promise.all([loadBans(),loadAccts()]);
   const listed=await listByApi();
   const res=listed&&listed.length
     ? await Promise.all(listed.map(async ym=>[ym,await loadSeason(ym)]))
