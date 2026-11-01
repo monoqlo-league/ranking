@@ -107,6 +107,7 @@ footer{color:var(--muted);font-size:12px}
     <li>通算で<b>10半荘以上</b>打っている人。</li>
     <li>今月を除いた<b>直近3か月</b>(<span id="win">—</span>)に、1半荘以上打っている人。</li>
     <li>サーバー規約違反によりBANされた人は表示しない。</li>
+    <li>アカウントを変更した人の、元のアカウントは表示しない(アカウント変更者リストに載っている人)。</li>
   </ul>
   <p style="margin:10px 0 0;font-size:13px;color:var(--muted)">レートの計算そのものには、表示しない人の対局も含めて全対局を使う。</p>
   </details>
@@ -212,6 +213,18 @@ async function loadBans(){
     }
   }catch(e){}
   return B;
+}
+/* アカウント変更者リスト(account-change.csv)の元のアカウント。BANと同じく表から外す(計算には対局を使う) */
+async function loadAccts(){
+  const A=new Set();
+  try{
+    const r=await fetchData("account-change.csv"); if(!r.ok) return A;
+    for(const row of parseCSV(decode(await r.arrayBuffer()).replace(/^\uFEFF/,""))){
+      const m=(row[0]||"").match(/\[(\d+)\]|^\s*(\d+)\s*$/);
+      if(m) A.add(m[1]||m[2]);
+    }
+  }catch(e){}
+  return A;
 }
 
 /* ---------- 算出方法 ----------
@@ -409,7 +422,8 @@ $("tabs").addEventListener("click",e=>{const b=e.target.closest(".tab");if(b)sel
 select(location.hash.slice(1));
 
 (async()=>{
-  const [bans,list]=await Promise.all([loadBans(),listMonths()]);
+  const [bans,accts,list]=await Promise.all([loadBans(),loadAccts(),listMonths()]);
+  for(const id of accts) bans.add(id);              // 表に出さない人として BAN とまとめて扱う
   const seasons=await Promise.all(list.yms.map(async ym=>{const r=await fetchData(`${ym}.csv`);if(!r.ok)return [];try{return toGames(decode(await r.arrayBuffer()),ym)}catch(e){return []}}));
   const seen=new Set(),G=[];
   for(const s of seasons) for(const g of s){ if(seen.has(g.key)) continue; seen.add(g.key); G.push(g) }
