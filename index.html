@@ -440,7 +440,7 @@ const SUM_COL={hands:"局数",agari:"和了数",agariPts:"和了点合計",agari
 const MAX_COL={renchan:"最大連荘数"};                                         // 足さずに、いちばん大きい値を取る列
 const SKIP_COL=new Set(["ゲームID","名前","内部ID","和了点平均","和了巡目平均","放銃点平均","立直巡目平均","最高和了点"]);   // 使わない列(平均は、合計から計算し直す)
 /* maxScore=最高スコア、minScore=最低スコア。終局時の持ち点のうち、いちばん大きい値・小さい値。これだけは summary ではなく、対局記録(牌譜履歴の「N位PT」)から取る */
-const SUM_KEYS=Object.keys(SUM_COL),MAX_KEYS=[...Object.keys(MAX_COL),"maxScore"],MIN_KEYS=["minScore"];
+const SUM_KEYS=Object.keys(SUM_COL),MAX_KEYS=[...Object.keys(MAX_COL),"maxScore","avoidRun","topRun"],MIN_KEYS=["minScore"];
 const emptyStat=()=>({games:0,...Object.fromEntries(SUM_KEYS.map(k=>[k,0])),...Object.fromEntries(MAX_KEYS.map(k=>[k,null])),...Object.fromEntries(MIN_KEYS.map(k=>[k,null])),yaku:new Map()});
 function addStat(to,x){
   to.games+=x.games;
@@ -468,6 +468,16 @@ function toSummary(text){
   }).filter(r=>r.gid);
   return {rows:out,yakuNames:yc.map(v=>v[0])};
 }
+/* 最大連続ラス回避数(avoidRun)・最大連続トップ回数(topRun)。対局記録を終局時刻の順に並べ、続けて4位以外・1位だった最長の回数。
+   summary ではなく対局記録から数える(その範囲の全対局が対象)。プレイヤーID → {avoidRun,topRun} */
+function streaks(games){
+  const G=[...games].sort((a,b)=>{const x=a[3]||a[0],y=b[3]||b[0];return x<y?-1:x>y?1:a[0]<b[0]?-1:a[0]>b[0]?1:0});
+  const S=new Map();
+  for(const g of G) g[1].forEach(([id],i)=>{let s=S.get(id);if(!s){s={a:0,t:0,avoidRun:0,topRun:0};S.set(id,s)}
+    s.a=i<3?s.a+1:0; s.t=i===0?s.t+1:0;
+    if(s.a>s.avoidRun)s.avoidRun=s.a; if(s.t>s.topRun)s.topRun=s.t});
+  return S;
+}
 /* 1か月分をプレイヤーごとに足す。games=その月の対局記録(非表示の対局を除いたあと)。
    対局記録にないゲームIDの行は使わない。プレイヤーID → 件数 の Map を返す(1人も結び付かなければ null) */
 function buildSummary(sm,games){
@@ -486,6 +496,7 @@ function buildSummary(sm,games){
   for(const g of games)for(const [id,,,score] of g[1]){const a=M.get(id);if(!a||score==null)continue;
     if(a.maxScore==null||score>a.maxScore)a.maxScore=score;
     if(a.minScore==null||score<a.minScore)a.minScore=score}
+  for(const [id,s] of streaks(games)){const a=M.get(id);if(a){a.avoidRun=s.avoidRun;a.topRun=s.topRun}}
   M.yakuNames=sm.yakuNames;
   return M;
 }
@@ -521,6 +532,8 @@ function summaryTotal(){
       for(const [pid,x] of M){let a=T.get(pid);if(!a){a=emptyStat();T.set(pid,a)}addStat(a,x)}
       for(const n of M.yakuNames||[]) if(!names.includes(n)) names.push(n);
     }
+    /* 連続記録は月をまたいで続くので、月ごとの最大ではなく、通算の対局記録から数え直す */
+    for(const [id,s] of streaks(TOTAL)){const a=T.get(id);if(a){a.avoidRun=s.avoidRun;a.topRun=s.topRun}}
     T.yakuNames=names; T.months=list.length; T.from=list[0][0]; T.to=list[list.length-1][0];
     return T;
   })().then(M=>{SUMM_OK.set("total",M);return M}));
@@ -528,7 +541,7 @@ function summaryTotal(){
 }
 /* 個人の詳細成績(いま表示している範囲(月・通算)の集計が読めていて、その人の分があるときだけ。無ければ null) */
 function playerStat(id){const M=SUMM_OK.get(CUR);return M&&M.get(id)||null}
-const STAT_NOTE="枠が青い項目は、その項目のランキングで上位1割に入っているもの。枠が赤い項目は、下位1割に入っているもの(順位の付く人の中で。BAN・アカ変・10戦未満・値の無い人は数えない)。項目を押すと、その項目のランキングが下に出る(10戦未満のプレイヤーは出さない。和了役一覧は、役ごとの和了回数が出る)。和了率・放銃率・副露率・立直率は、局数に対する割合。立直成功率・立直後放銃率は、立直の回数に対する割合。ツモ率・ロン率・面前和了率・副露和了率は、和了の回数に対する割合。最高スコア・最低スコアは、終局時の持ち点のうち、いちばん大きいもの・小さいもの(最低スコアのランキングは高い順)。ドラの平均枚数は、和了1回あたりの枚数(総ドラは、表ドラ・裏ドラ・赤ドラの合計)。副露率は、副露した局の割合(1局に何回鳴いても1回)。";
+const STAT_NOTE="枠が青い項目は、その項目のランキングで上位1割に入っているもの。枠が赤い項目は、下位1割に入っているもの(順位の付く人の中で。BAN・アカ変・10戦未満・値の無い人は数えない)。項目を押すと、その項目のランキングが下に出る(10戦未満のプレイヤーは出さない。和了役一覧は、役ごとの和了回数が出る)。和了率・放銃率・副露率・立直率は、局数に対する割合。立直成功率・立直後放銃率は、立直の回数に対する割合。ツモ率・ロン率・面前和了率・副露和了率は、和了の回数に対する割合。最大連続ラス回避数・最大連続トップ回数は、対局記録を終局時刻の順に並べて、続けて4位以外・1位だった最長の回数(通算は月をまたいで数える)。最高スコア・最低スコアは、終局時の持ち点のうち、いちばん大きいもの・小さいもの(最低スコアのランキングは高い順)。ドラの平均枚数は、和了1回あたりの枚数(総ドラは、表ドラ・裏ドラ・赤ドラの合計)。副露率は、副露した局の割合(1局に何回鳴いても1回)。";
 /* 詳細成績の項目。val=並べ替えに使う値(出せないときは null)、show=表示、sub=もとの件数、asc=ランキングで小さいほうを上にする */
 const ratio=(a,b)=>b?a/b:null;
 const avg2=(a,b,u)=>b?(a/b).toFixed(2)+u:"—";
@@ -549,6 +562,8 @@ const STAT_DEFS=[
   {k:"avg",label:"平均和了点",val:x=>ratio(x.agariPts,x.agari),show:x=>x.agari?comma(x.agariPts/x.agari)+"点":"—",sub:x=>`和了${x.agari}回`},
   {k:"maxScore",label:"最高スコア",val:x=>x.maxScore,show:x=>x.maxScore!=null?(x.maxScore<0?"−":"")+comma(Math.abs(x.maxScore))+"点":"—",sub:x=>"終局時の持ち点",nosub:true},
   {k:"minScore",label:"最低スコア",val:x=>x.minScore,show:x=>x.minScore!=null?(x.minScore<0?"−":"")+comma(Math.abs(x.minScore))+"点":"—",sub:x=>"終局時の持ち点",nosub:true},      // nosub=ランキングに件数の列を出さない(全員同じ文字になるため)
+  {k:"avoidRun",label:"最大連続ラス回避数",val:x=>x.avoidRun,show:x=>x.avoidRun!=null?x.avoidRun+"回":"—",sub:x=>"続けて4位以外",nosub:true},
+  {k:"topRun",label:"最大連続トップ回数",val:x=>x.topRun,show:x=>x.topRun!=null?x.topRun+"回":"—",sub:x=>"続けて1位",nosub:true},
   {k:"renchan",label:"最大連荘数",val:x=>x.renchan,show:x=>x.renchan!=null?x.renchan+"連荘":"—",sub:x=>`${x.hands}局`},
   {k:"dora",label:"和了平均表ドラ枚数",val:x=>ratio(x.dora,x.agari),show:x=>avg2(x.dora,x.agari,"枚"),sub:x=>`${x.dora}枚 / 和了${x.agari}回`},
   {k:"aka",label:"和了平均赤ドラ枚数",val:x=>ratio(x.aka,x.agari),show:x=>avg2(x.aka,x.agari,"枚"),sub:x=>`${x.aka}枚 / 和了${x.agari}回`},
