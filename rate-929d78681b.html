@@ -193,7 +193,7 @@ async function listMonths(){
   try{
     const r=await fetchData("index.json");
     if(r.ok){const j=await r.json(); if(j&&j.files){
-      const yms=Object.keys(j.files).filter(n=>/^\d{6}\.csv$/.test(n)).map(n=>n.slice(0,6)).filter(isYM);
+      const yms=Object.keys(j.files).filter(n=>/^data\/\d{6}\.csv$/.test(n)).map(n=>n.slice(5,11)).filter(isYM);
       const now=new Date(),cur=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,"0")}`;
       if(yms.length) return {yms:yms.includes(cur)?yms:yms.concat(cur),latest:j.latest||null};
     }}
@@ -424,7 +424,7 @@ select(location.hash.slice(1));
 (async()=>{
   const [bans,accts,list]=await Promise.all([loadBans(),loadAccts(),listMonths()]);
   for(const id of accts) bans.add(id);              // 表に出さない人として BAN とまとめて扱う
-  const seasons=await Promise.all(list.yms.map(async ym=>{const r=await fetchData(`${ym}.csv`);if(!r.ok)return [];try{return toGames(decode(await r.arrayBuffer()),ym)}catch(e){return []}}));
+  const seasons=await Promise.all(list.yms.map(async ym=>{const r=await fetchData(`data/${ym}.csv`);if(!r.ok)return [];try{return toGames(decode(await r.arrayBuffer()),ym)}catch(e){return []}}));
   const seen=new Set(),G=[];
   for(const s of seasons) for(const g of s){ if(seen.has(g.key)) continue; seen.add(g.key); G.push(g) }
   if(!G.length){$("tb").innerHTML='<tr><td colspan="8" class="empty">対局データを読めなかった</td></tr>';$("meta").innerHTML="";return}

@@ -353,7 +353,7 @@ const p2=v=>String(v).padStart(2,"0");
 const fmtDT=d=>`${d.getFullYear()}/${p2(d.getMonth()+1)}/${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
 const UPD=new Map();                                  // CSVの名前 → 更新日時を取る約束(同じものを何度も取りに行かない)
 function updatedAt(view){
-  const path=view==="total"?"":`${view}.csv`;
+  const path=view==="total"?"":`data/${view}.csv`;
   if(INDEX){                                          // index.json にあれば、API を使わない(通算は、CSVのうちいちばん新しい更新)
     const t=path?INDEX.files[path]&&INDEX.files[path].updated:INDEX.latest;
     if(t&&!isNaN(new Date(t))) return Promise.resolve(new Date(t));
@@ -821,7 +821,7 @@ function fromPaths(paths){
   // 詳細成績(牌譜の集計)のある月 → ファイルの場所。summary フォルダの中を優先し、無ければ直下(以前の置き場所)
   SUMM_HAS=new Map();
   for(const dir of ["","summary/"]) for(const p of paths){const m=p.match(/^(?:summary\/)?(\d{6})-summary\.csv$/);if(m&&p.startsWith(dir)&&(dir||!p.includes("/")))SUMM_HAS.set(m[1],p)}
-  return paths.filter(n=>/^\d{6}\.csv$/.test(n)).map(n=>n.slice(0,6)).filter(isYM);
+  return paths.filter(n=>/^data\/\d{6}\.csv$/.test(n)).map(n=>n.slice(5,11)).filter(isYM);   // 対局記録は data フォルダ
 }
 async function listByApi(){
   INDEX=await loadIndex();
@@ -856,7 +856,7 @@ async function probeBackward(){
   return found;
 }
 async function loadSeason(ym){
-  const r=await fetchData(`${ym}.csv`);
+  const r=await fetchData(`data/${ym}.csv`);
   if(!r.ok) return null;
   try{return toGames(decode(await r.arrayBuffer())).games}
   catch(err){console.warn(ym,err);BAD.push(`${ym}.csv(${err.message})`);return null}

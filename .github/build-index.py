@@ -300,7 +300,8 @@ def check_team(paths):
 
 
 # ---------- 個人戦(ranking) ----------
-P_MONTH = re.compile(r"^(\d{4})(\d{2})\.csv$")
+P_MONTH = re.compile(r"^data/(\d{4})(\d{2})\.csv$")          # 対局記録は data フォルダに置く
+P_MONTH_ROOT = re.compile(r"^(\d{4})(\d{2})\.csv$")       # 直下に置いた対局記録(読まれない)
 P_SUMM = re.compile(r"^(?:summary/)?(\d{6})-summary\.csv$")
 
 
@@ -368,8 +369,10 @@ def check_personal(paths):
             continue
         if P_SUMM.match(p) and not p.startswith("summary/"):
             problems.append((p, "詳細成績のもとは summary フォルダに置くことになっている(このままでも読まれる)"))
+        elif P_MONTH_ROOT.match(p):
+            problems.append((p, f"対局記録は data フォルダに置くことになっている。ここに置いてもランキングには出ない(data/{p} に置き直す)"))
         elif not (P_MONTH.match(p) or P_SUMM.match(p) or p in ("ban.csv", "account-change.csv")):
-            problems.append((p, "名前がルールと違うため、ランキングでは読み込まれない(例: 202610.csv)"))
+            problems.append((p, "名前がルールと違うため、ランキングでは読み込まれない(例: data/202610.csv)"))
     for p in sorted(paths):
         m = P_MONTH.match(p)
         if not m:
@@ -417,7 +420,7 @@ def check_personal(paths):
         m = P_SUMM.match(p)
         if m:
             if m.group(1) not in games_by:
-                problems.append((p, f"対応する対局記録({m.group(1)}.csv)がない"))
+                problems.append((p, f"対応する対局記録(data/{m.group(1)}.csv)がない"))
             else:
                 bl = splits.get(m.group(1), ({}, {}))[1]
                 check_summary(p, games_by[m.group(1)], problems, where_links=lambda ls, bl=bl: split_note(bl.get(l) for l in ls))
@@ -461,7 +464,7 @@ def main():
     for p in paths:
         if not p.lower().endswith(".csv"):
             continue
-        ts = (git("log", "-1", "--format=%ct", "--", p) or "").strip()      # 最後にこのファイルを変えたコミットの日時(UTC にそろえる)
+        ts = (git("log", "-1", "--format=%ct", "--follow", "--diff-filter=AM", "--", p) or "").strip()   # 置き場所を移しただけ(名前の変更)は更新に数えない      # 最後にこのファイルを変えたコミットの日時(UTC にそろえる)
         t = datetime.datetime.fromtimestamp(int(ts), datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") if ts.isdigit() else ""
         files[p] = {"updated": t, "size": os.path.getsize(p), **info.get(p, {})}
     latest = max((v["updated"] for v in files.values() if v["updated"]), default="")

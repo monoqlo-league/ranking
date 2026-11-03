@@ -31,7 +31,7 @@ MONOQLO麻雀部 PTランキングのページ本体(`index.html`)と、集計�
 
 ## ファイル名のルール
 
-CSVは **1シーズン(1か月)につき1ファイル**、名前は **年4桁+月2桁.csv** にする。
+対局記録のCSVは **`data` フォルダの中** に、**1シーズン(1か月)につき1ファイル**、名前は **年4桁+月2桁.csv** にして置く(2026年11月に直下から `data` フォルダへ移した)。
 
 | シーズン | ファイル名 |
 |---|---|
@@ -47,7 +47,7 @@ CSVは **1シーズン(1か月)につき1ファイル**、名前は **年4桁+�
 
 1. 雀魂の大会管理画面から、そのシーズンの対局記録のCSVを書き出す。
 2. ファイル名を、そのシーズンの **`年月.csv`**(例: `202610.csv`)に変える。
-3. このリポジトリのページ上部にある **「Add file」→「Upload files」** を押す。
+3. このリポジトリのファイル一覧で **`data` フォルダを開いてから**、ページ上部の **「Add file」→「Upload files」** を押す(フォルダを開かずに上げると直下に置かれ、ランキングに出ない。点検が Discord に知らせる)。
 4. CSVを画面にドラッグ&ドロップする。同じ名前のファイルがあれば上書きされる。
 5. 下の **「Commit changes」** を押す。
 6. 1〜2分待ってから、ランキングのページを再読み込みする。
@@ -147,7 +147,7 @@ CSVをアップロードすると、GitHub Actions が自動で次の2つを行�
 
 ## Discordへの更新通知
 
-対局記録(`YYYYMM.csv`)をアップロードすると、Discordのチャンネルに自動で通知が届く。増えた対局数とランキングのURLが載る。詳細成績(`summary` フォルダ)・`ban.csv`・README の変更では通知しない。
+対局記録(`data/YYYYMM.csv`)をアップロードすると、Discordのチャンネルに自動で通知が届く。増えた対局数とランキングのURLが載る。詳細成績(`summary` フォルダ)・`ban.csv`・README の変更では通知しない。
 
 通知先の設定(管理者が最初に1回だけ行う):
 
@@ -164,7 +164,7 @@ CSVをアップロードすると、GitHub Actions が自動で次の2つを行�
 
 ## 分割CSVの自動作成
 
-対局記録(`YYYYMM.csv`)をアップロードすると、[splitdata-download](https://github.com/monoqlo-league/splitdata-download) に、まだ分割していない対局を10対局ずつのCSVにして足すよう知らせる。分割のきまりは splitdata-download の README を参照。
+対局記録(`data/YYYYMM.csv`)をアップロードすると、[splitdata-download](https://github.com/monoqlo-league/splitdata-download) に、まだ分割していない対局を10対局ずつのCSVにして足すよう知らせる。分割のきまりは splitdata-download の README を参照。
 
 知らせるためのトークンの設定(管理者が最初に1回だけ行う):
 
@@ -186,7 +186,7 @@ CSVをアップロードすると、GitHub Actions が自動で次の2つを行�
 
 - `index.html` … ランキングのページ本体
 - `完了.png` … 終わった月の見出しに重ねる印。差し替えるときは、同じ名前で上書きする。背景が透明なPNGにする
-- `YYYYMM.csv` … 各シーズンの対局記録
+- `data/YYYYMM.csv` … 各シーズンの対局記録
 - `summary/YYYYMM-summary.csv` … 各シーズンの詳細成績の集計(牌譜から書き出したもの。ある月だけ)
 - `ban.csv` … BANリスト
 - `account-change.csv` … アカウント変更者リスト

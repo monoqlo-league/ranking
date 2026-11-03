@@ -144,9 +144,9 @@ async function readList(k){
 }
 /* 参加者と月。対局記録(YYYYMM.csv)を全部読み、IDごとに最新の名前を取る */
 async function loadPlayers(){
-  const tree=await gh(`/repos/${OWNER}/${REPO}/git/trees/main`);
-  const files=tree.tree.filter(t=>t.type==="blob"&&/^\d{6}\.csv$/.test(t.path)).map(t=>t.path).sort();
-  MONTHS=files.map(f=>f.slice(0,6));
+  const tree=await gh(`/repos/${OWNER}/${REPO}/git/trees/main?recursive=1`);
+  const files=tree.tree.filter(t=>t.type==="blob"&&/^data\/\d{6}\.csv$/.test(t.path)).map(t=>t.path).sort();   // 対局記録は data フォルダ
+  MONTHS=files.map(f=>f.slice(5,11));
   const P=new Map();
   await Promise.all(files.map(async f=>{
     const b=await gh(`/repos/${OWNER}/${REPO}/git/blobs/${tree.tree.find(t=>t.path===f).sha}`);

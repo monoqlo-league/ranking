@@ -11,7 +11,7 @@ import subprocess
 import sys
 import urllib.request
 
-MONTH = re.compile(r"^(\d{4})(\d{2})\.csv$")
+MONTH = re.compile(r"^data/(\d{4})(\d{2})\.csv$")   # 対局記録は data フォルダ
 ZERO = "0" * 40
 
 
@@ -31,7 +31,7 @@ def games(rev, name):
 
 def test_message():
     """手動実行のときのテスト送信。最新の月の対局数を添える。"""
-    months = sorted(n for n in (git("ls-tree", "--name-only", "HEAD") or "").splitlines() if MONTH.match(n))
+    months = sorted(n for n in (git("ls-tree", "-r", "--name-only", "HEAD") or "").splitlines() if MONTH.match(n))
     lines = ["🔔 **通知のテスト**", "この通知が見えていれば、ランキング更新の通知はこのチャンネルに届きます。"]
     if months:
         m = MONTH.match(months[-1])
@@ -44,7 +44,7 @@ def main():
     after = os.environ.get("AFTER") or "HEAD"
     if not before or before == ZERO or git("cat-file", "-e", before + "^{commit}") is None:
         before = (git("rev-parse", after + "^") or "").strip() or None
-    diff = git("diff", "--name-only", before, after) if before else git("ls-tree", "--name-only", after)
+    diff = git("diff", "--name-only", before, after) if before else git("ls-tree", "-r", "--name-only", after)
     names = sorted(n for n in (diff or "").splitlines() if MONTH.match(n))
 
     lines = []
@@ -56,6 +56,11 @@ def main():
         if m:
             label = f"{m.group(1)}年{m.group(2)}月"
             old, new = games(before, n), games(after, n)
+            if old is None and before:
+                old = games(before, n[len("data/"):])          # data フォルダに移す前(直下)の版と比べる
+                same = (git("rev-parse", f"{before}:{n[len('data/'):]}") or "").strip()
+                if same and same == (git("rev-parse", f"{after}:{n}") or "").strip():
+                    continue                                    # 置き場所を移しただけ。知らせない
             if new is None:
                 lines.append(f"・{label}の戦績を削除")
             elif old is None:
