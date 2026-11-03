@@ -776,8 +776,8 @@ function fail(msg){$("tb").innerHTML=`<tr><td colspan="10" class="empty">${esc(m
    1. GitHubのAPIでリポジトリのファイル一覧(フォルダの中も含む)を取り、直下の YYYYMM.csv をすべて拾う
    2. APIが使えないとき(回数制限・独自ドメインなど)は、来月から過去へ順にファイルを確かめる */
 const REPO_OWNER=location.hostname.endsWith(".github.io")?location.hostname.split(".")[0]:"";
-/* データ(年月CSV・ban.csv)は別リポジトリに置く。名前を変えたらここも変える */
-const DATA_REPO="monoqlo-data";
+/* データ(年月CSV・ban.csv など)を置くリポジトリ。2026年11月から、このページと同じリポジトリ(ranking)に置く。リポジトリ名を変えたらここも変える */
+const DATA_REPO="ranking";
 const REPO_NAME=REPO_OWNER?DATA_REPO:"";
 const DATA_BASE=REPO_OWNER?`${location.origin}/${DATA_REPO}/`:"";  // GitHub Pages以外(手元での確認)では同じ場所から読む
 /* データ用リポジトリの最新の版(コミットID)。ページを開いたときに GitHub へ1回だけ問い合わせる。

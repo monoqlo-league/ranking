@@ -1,0 +1,149 @@
+{
+ "generated": "2026-11-03T13:48:20+00:00",
+ "latest": "2026-11-03T13:48:10Z",
+ "files": {
+  "202509.csv": {
+   "updated": "2026-10-01T11:58:26Z",
+   "size": 24194,
+   "games": 99
+  },
+  "202510.csv": {
+   "updated": "2026-10-01T11:58:26Z",
+   "size": 26510,
+   "games": 108
+  },
+  "202511.csv": {
+   "updated": "2026-10-01T11:58:26Z",
+   "size": 37849,
+   "games": 154
+  },
+  "202512.csv": {
+   "updated": "2026-10-01T11:58:26Z",
+   "size": 34773,
+   "games": 141
+  },
+  "202601.csv": {
+   "updated": "2026-10-01T11:58:26Z",
+   "size": 30429,
+   "games": 124
+  },
+  "202602.csv": {
+   "updated": "2026-10-01T11:58:26Z",
+   "size": 73785,
+   "games": 299
+  },
+  "202603.csv": {
+   "updated": "2026-10-01T11:58:26Z",
+   "size": 60732,
+   "games": 247
+  },
+  "202604.csv": {
+   "updated": "2026-10-01T11:58:26Z",
+   "size": 31481,
+   "games": 128
+  },
+  "202605.csv": {
+   "updated": "2026-10-01T11:58:26Z",
+   "size": 53026,
+   "games": 214
+  },
+  "202606.csv": {
+   "updated": "2026-10-01T11:58:26Z",
+   "size": 68146,
+   "games": 275
+  },
+  "202607.csv": {
+   "updated": "2026-10-01T11:58:26Z",
+   "size": 116190,
+   "games": 469
+  },
+  "202608.csv": {
+   "updated": "2026-10-01T12:54:10Z",
+   "size": 142127,
+   "games": 567
+  },
+  "202609.csv": {
+   "updated": "2026-10-01T13:11:24Z",
+   "size": 141862,
+   "games": 560
+  },
+  "202610.csv": {
+   "updated": "2026-10-30T15:11:42Z",
+   "size": 137438,
+   "games": 546
+  },
+  "202611.csv": {
+   "updated": "2026-11-03T09:40:28Z",
+   "size": 18731,
+   "games": 75
+  },
+  "account-change.csv": {
+   "updated": "2026-11-01T03:26:42Z",
+   "size": 79
+  },
+  "ban.csv": {
+   "updated": "2026-11-01T03:20:11Z",
+   "size": 153
+  },
+  "summary/202509-summary.csv": {
+   "updated": "2026-10-08T05:46:06Z",
+   "size": 107032
+  },
+  "summary/202510-summary.csv": {
+   "updated": "2026-10-08T05:46:06Z",
+   "size": 116445
+  },
+  "summary/202511-summary.csv": {
+   "updated": "2026-10-10T14:44:40Z",
+   "size": 166097
+  },
+  "summary/202512-summary.csv": {
+   "updated": "2026-10-11T14:30:09Z",
+   "size": 151895
+  },
+  "summary/202601-summary.csv": {
+   "updated": "2026-10-11T14:30:09Z",
+   "size": 133804
+  },
+  "summary/202602-summary.csv": {
+   "updated": "2026-10-11T01:02:37Z",
+   "size": 321250
+  },
+  "summary/202603-summary.csv": {
+   "updated": "2026-10-11T01:09:55Z",
+   "size": 265122
+  },
+  "summary/202604-summary.csv": {
+   "updated": "2026-10-11T01:14:02Z",
+   "size": 137891
+  },
+  "summary/202605-summary.csv": {
+   "updated": "2026-10-12T23:10:56Z",
+   "size": 230462
+  },
+  "summary/202606-summary.csv": {
+   "updated": "2026-10-12T23:08:51Z",
+   "size": 296003
+  },
+  "summary/202607-summary.csv": {
+   "updated": "2026-10-13T00:25:48Z",
+   "size": 503881
+  },
+  "summary/202608-summary.csv": {
+   "updated": "2026-10-13T07:28:25Z",
+   "size": 610668
+  },
+  "summary/202609-summary.csv": {
+   "updated": "2026-10-11T14:32:29Z",
+   "size": 604390
+  },
+  "summary/202610-summary.csv": {
+   "updated": "2026-11-03T13:48:10Z",
+   "size": 502436
+  },
+  "summary/202611-summary.csv": {
+   "updated": "2026-11-03T13:36:13Z",
+   "size": 76141
+  }
+ }
+}

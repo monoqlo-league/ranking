@@ -171,7 +171,7 @@ function toGames(text,ym){
 }
 function decode(buf){try{return new TextDecoder("utf-8",{fatal:true}).decode(buf)}catch(e){return new TextDecoder("shift_jis").decode(buf)}}
 const REPO_OWNER=location.hostname.endsWith(".github.io")?location.hostname.split(".")[0]:"";
-const DATA_REPO="monoqlo-data";
+const DATA_REPO="ranking";
 const DATA_BASE=REPO_OWNER?`${location.origin}/${DATA_REPO}/`:"";
 const HEAD_SHA=REPO_OWNER?fetch(`https://api.github.com/repos/${REPO_OWNER}/${DATA_REPO}/commits/HEAD`,{headers:{Accept:"application/vnd.github.sha"},cache:"no-store"})
   .then(r=>r.ok?r.text():"").then(s=>(s=s.trim(),/^[0-9a-f]{40}$/.test(s)?s:null)).catch(()=>null):Promise.resolve(null);
