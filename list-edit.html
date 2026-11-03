@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>BAN・アカウント変更の登録</title>
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#f3f5f2;--surface:#ffffff;--ink:#17201b;--muted:#5d6b63;--line:#dde3dd;
+  --accent:#1d6a4f;--accent-soft:#e2efe8;--minus:#b23a2e;--warn:#8a5a00;--warn-soft:#fbf1dc;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
+  --bg:#101512;--surface:#171e1a;--ink:#e6ece8;--muted:#98a69e;--line:#2a332e;
+  --accent:#6cc39c;--accent-soft:#1d2d25;--minus:#f0877a;--warn:#e8c071;--warn-soft:#2c2414;}}
+:root[data-theme="dark"]{color-scheme:dark;
+  --bg:#101512;--surface:#171e1a;--ink:#e6ece8;--muted:#98a69e;--line:#2a332e;
+  --accent:#6cc39c;--accent-soft:#1d2d25;--minus:#f0877a;--warn:#e8c071;--warn-soft:#2c2414;}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif;font-size:15px;line-height:1.6;padding-inline:16px;padding-block:32px 48px}
+.wrap{max-width:720px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr);gap:20px}
+.eyebrow{font-size:13px;font-weight:700;letter-spacing:.12em;color:var(--accent)}
+h1{font-size:clamp(24px,5vw,32px);font-weight:900;line-height:1.3;margin:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px;display:grid;gap:12px}
+.card h2{font-size:15px;margin:0}
+.note{font-size:13px;color:var(--muted);margin:0}
+.status{font-size:14px;margin:0;min-height:1.6em}
+.status.err{color:var(--minus);font-weight:700}
+.status.ok{color:var(--accent);font-weight:700}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+button{font:inherit;cursor:pointer;border-radius:8px;padding:9px 16px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-weight:700}
+button.sub{background:var(--surface);color:var(--accent)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{all:unset;cursor:pointer;padding:8px 16px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-weight:700;color:var(--muted)}
+.tab[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+label.f{display:grid;gap:4px;font-size:13px;font-weight:700;color:var(--muted)}
+select,input[type=text],input[type=search]{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 10px;width:100%}
+.preview{font-family:"IBM Plex Mono",monospace;font-size:13px;background:var(--bg);border-radius:8px;padding:10px 12px;overflow-wrap:anywhere}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left}
+th{font-size:12px;color:var(--muted);font-weight:500}
+td.m{font-family:"IBM Plex Mono",monospace}
+.warnbox{background:var(--warn-soft);color:var(--warn);border-radius:10px;padding:10px 14px;font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="eyebrow">MONOQLO麻雀部 管理者用</div>
+  <h1>BAN・アカウント変更の登録</h1>
+</header>
+<div class="warnbox">管理者用のページ。登録すると、このリポジトリの <code>ban.csv</code>(BANリスト)・<code>account-change.csv</code>(アカウント変更者リスト)がすぐに書き換わり、1〜2分でランキングに反映される。</div>
+
+<section class="card">
+  <h2>1. GitHubでログイン</h2>
+  <p class="note">ranking に書き込める GitHub アカウントでログインする。アップロードページでログイン済みなら、そのまま使える。</p>
+  <div class="row"><button id="login" type="button">GitHubでログイン</button><span id="who" hidden></span><button id="logout" class="sub" type="button" hidden>ログアウト</button></div>
+  <p class="status" id="auth"></p>
+</section>
+
+<section class="card" id="form" hidden>
+  <h2>2. 登録する</h2>
+  <div class="tabs" role="tablist" aria-label="登録するリスト">
+    <button type="button" class="tab" role="tab" data-k="ban" aria-selected="true">BAN</button>
+    <button type="button" class="tab" role="tab" data-k="acct" aria-selected="false">アカウント変更</button>
+  </div>
+  <p class="note" id="desc"></p>
+  <label class="f">対象者(参加者から選ぶ)
+    <input id="q" type="search" placeholder="名前・IDで絞り込む">
+    <select id="who-sel" size="8"></select>
+  </label>
+  <label class="f"><span id="ymlabel">BAN月</span>
+    <select id="ym"></select>
+  </label>
+  <label class="f">備考(空欄でよい)
+    <input id="memo" type="text" maxlength="100">
+  </label>
+  <div class="preview" id="preview">—</div>
+  <div class="row"><button id="save" type="button" disabled>登録する</button></div>
+  <p class="status" id="msg"></p>
+</section>
+
+<section class="card" id="lists" hidden>
+  <h2>いま載っている人</h2>
+  <div id="cur"></div>
+</section>
+</div>
+
+<!-- ログインの設定(GitHub App の Client ID と中継のURL)は、アップロードページと共通のものを使う -->
+<script src="../splitdata-download/config.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const OWNER="monoqlo-league",REPO="ranking";
+const CFG=window.SPLITDATA_CONFIG||{},CLIENT_ID=(CFG.githubClientId||"").trim(),LOGIN_ENDPOINT=(CFG.loginEndpoint||"").trim();
+const TOKEN_KEY="monoqlo-upload-login",STATE_KEY="monoqlo-listedit-state";   // ログインはアップロードページと共有する(同じ場所に保存)
+const LISTS={
+  ban:{file:"ban.csv",head:"プレイヤー,BAN月,備考",ymLabel:"BAN月",name:"BAN",
+       desc:"BAN月以降の月と通算で、順位の対象外として最下位に「BAN」と表示される(成績はそのまま)。レーティング(仮)の表からも外れる。"},
+  acct:{file:"account-change.csv",head:"プレイヤー,変更月,備考",ymLabel:"変更月",name:"アカウント変更",
+       desc:"元のアカウントを登録する。通算ランキングだけ順位の対象外になり「アカ変」と表示される(各月はそのまま)。レーティング(仮)の表からも外れる。変更月は記録用。"},
+};
+let TOKEN="",KIND="ban",PLAYERS=[],MONTHS=[],CUR={ban:[],acct:[]};
+
+/* ---------- GitHub ---------- */
+async function gh(path,opt={}){
+  const res=await fetch("https://api.github.com"+path,{method:opt.method||"GET",cache:"no-store",
+    headers:Object.assign({Authorization:"Bearer "+TOKEN,Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"},opt.body?{"Content-Type":"application/json"}:{}),
+    body:opt.body?JSON.stringify(opt.body):undefined});
+  if(opt.allow404&&res.status===404) return null;
+  if(!res.ok){let m="";try{m=(await res.json()).message||""}catch(_){}const e=new Error(`GitHub ${res.status}${m?": "+m:""}`);e.status=res.status;throw e}
+  return res.status===204?null:res.json();
+}
+const utf8=new TextEncoder(),dec=new TextDecoder("utf-8");
+const b64enc=s=>{const b=utf8.encode(s);let x="";for(let i=0;i<b.length;i+=0x8000)x+=String.fromCharCode(...b.subarray(i,i+0x8000));return btoa(x)};
+const b64dec=s=>dec.decode(Uint8Array.from(atob(s.replace(/\s/g,"")),c=>c.charCodeAt(0)));
+function parseCSV(text){
+  const rows=[];let row=[],cell="",q=false;
+  for(let i=0;i<text.length;i++){const c=text[i];
+    if(q){if(c==='"'){if(text[i+1]==='"'){cell+='"';i++}else q=false}else cell+=c}
+    else if(c==='"')q=true; else if(c===','){row.push(cell);cell=""}
+    else if(c==='\n'||c==='\r'){if(c==='\r'&&text[i+1]==='\n')i++;row.push(cell);rows.push(row);row=[];cell=""}
+    else cell+=c}
+  if(cell!==""||row.length){row.push(cell);rows.push(row)}
+  return rows.filter(r=>r.some(v=>v.trim()!==""));
+}
+const csvCell=v=>/[",\r\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;
+const idOf=s=>{const m=(s||"").match(/\[(\d+)\]|^\s*(\d+)\s*$/);return m?(m[1]||m[2]):null};
+const ymLab=ym=>`${ym.slice(0,4)}年${+ym.slice(4)}月`;
+function nextYM(ym){let y=+ym.slice(0,4),m=+ym.slice(4)+1;if(m>12){m=1;y++}return `${y}${String(m).padStart(2,"0")}`}
+
+/* いまのリスト(最新の版)を読む。{sha,text,rows} */
+async function readList(k){
+  const f=await gh(`/repos/${OWNER}/${REPO}/contents/${LISTS[k].file}?ref=main`,{allow404:true});
+  if(!f) return {sha:null,text:"﻿"+LISTS[k].head+"\n",rows:[]};
+  const text=b64dec(f.content);
+  return {sha:f.sha,text,rows:parseCSV(text.replace(/^﻿/,"")).filter(r=>idOf(r[0]))};
+}
+/* 参加者と月。対局記録(YYYYMM.csv)を全部読み、IDごとに最新の名前を取る */
+async function loadPlayers(){
+  const tree=await gh(`/repos/${OWNER}/${REPO}/git/trees/main`);
+  const files=tree.tree.filter(t=>t.type==="blob"&&/^\d{6}\.csv$/.test(t.path)).map(t=>t.path).sort();
+  MONTHS=files.map(f=>f.slice(0,6));
+  const P=new Map();
+  await Promise.all(files.map(async f=>{
+    const b=await gh(`/repos/${OWNER}/${REPO}/git/blobs/${tree.tree.find(t=>t.path===f).sha}`);
+    const rows=parseCSV(b64dec(b.content).replace(/^﻿/,"")),h=rows[0].map(s=>s.trim()),st=h.indexOf("開始時間");
+    for(const r of rows.slice(1)) for(let i=1;i<=4;i++){
+      const raw=(r[h.indexOf(`${i}位プレイヤー名`)]||"").trim(),m=raw.match(/^(\[[^\]]*\])\[(\d+)\](.*)$/); if(!m) continue;
+      const name=m[3].replace(/\s*[(（]\s*[)）]\s*$/,"")||m[3],t=r[st]||"",p=P.get(m[2]);
+      if(!p) P.set(m[2],{id:m[2],srv:m[1],name,t,n:1}); else{p.n++; if(t>p.t){p.name=name;p.t=t;p.srv=m[1]}}
+    }
+  }));
+  PLAYERS=[...P.values()].sort((a,b)=>a.name.localeCompare(b.name,"ja"));
+}
+
+/* ---------- 画面 ---------- */
+function setStatus(el,t,cls){$(el).textContent=t;$(el).className="status"+(cls?" "+cls:"")}
+function fillPlayers(){
+  const q=$("q").value.trim().toLowerCase(),listed=new Set(CUR[KIND].map(r=>idOf(r[0])));
+  const L=PLAYERS.filter(p=>!q||p.name.toLowerCase().includes(q)||p.id.includes(q));
+  const keep=$("who-sel").value;
+  $("who-sel").innerHTML=L.map(p=>`<option value="${p.id}"${listed.has(p.id)?" disabled":""}>${esc(p.name)}(${p.id}・${p.n}半荘)${listed.has(p.id)?" — 登録済み":""}</option>`).join("");
+  if(L.some(p=>p.id===keep&&!listed.has(p.id))) $("who-sel").value=keep;
+  preview();
+}
+function fillMonths(){
+  const yms=MONTHS.length?[...MONTHS,nextYM(MONTHS[MONTHS.length-1])]:[];
+  const now=new Date(),cur=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,"0")}`;
+  $("ym").innerHTML=yms.slice().reverse().map(ym=>`<option value="${ym}">${ym}(${ymLab(ym)})${ym===yms[yms.length-1]?" 翌月":""}</option>`).join("");
+  if(yms.includes(cur)) $("ym").value=cur;
+}
+function rowFor(){
+  const p=PLAYERS.find(x=>x.id===$("who-sel").value); if(!p) return null;
+  return [`${p.srv}[${p.id}]${p.name}`,$("ym").value,$("memo").value.trim()];
+}
+function preview(){
+  const r=rowFor();
+  $("preview").textContent=r?`${LISTS[KIND].file} に足す行: ${r.map(csvCell).join(",")}`:"対象者を選ぶ";
+  $("save").disabled=!r||!$("ym").value;
+}
+function renderCur(){
+  const sec=k=>`<h3 style="font-size:14px;margin:8px 0 4px">${LISTS[k].name}(${LISTS[k].file})</h3>`+(CUR[k].length?
+    `<table><thead><tr><th>プレイヤー</th><th>${LISTS[k].ymLabel}</th><th>備考</th></tr></thead><tbody>${CUR[k].map(r=>`<tr><td>${esc(r[0])}</td><td class="m">${esc(r[1]||"")}</td><td>${esc(r[2]||"")}</td></tr>`).join("")}</tbody></table>`
+    :'<p class="note">まだいない</p>');
+  $("cur").innerHTML=sec("ban")+sec("acct");
+}
+function selectKind(k){
+  KIND=k;
+  document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected",b.dataset.k===k));
+  $("desc").textContent=LISTS[k].desc;$("ymlabel").textContent=LISTS[k].ymLabel;
+  setStatus("msg","");fillPlayers();
+}
+document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>selectKind(b.dataset.k)));
+["q"].forEach(id=>$(id).addEventListener("input",fillPlayers));
+["who-sel","ym"].forEach(id=>$(id).addEventListener("change",preview));
+$("memo").addEventListener("input",preview);
+
+$("save").addEventListener("click",async()=>{
+  const r=rowFor(); if(!r) return;
+  const L=LISTS[KIND],p=PLAYERS.find(x=>x.id===$("who-sel").value);
+  if(!confirm(`${p.name}(${p.id})を ${L.name} に登録する(${L.ymLabel} ${ymLab(r[1])})。よいか?`)) return;
+  $("save").disabled=true;setStatus("msg","登録している…");
+  try{
+    for(let attempt=0;attempt<3;attempt++){
+      const cur=await readList(KIND);                                         // 最新の版に足す(ほかの人の更新を消さない)
+      if(cur.rows.some(x=>idOf(x[0])===p.id)){CUR[KIND]=cur.rows;renderCur();fillPlayers();setStatus("msg","この人はすでに載っている。","err");return}
+      let text="\uFEFF"+cur.text.replace(/^\uFEFF/,""); if(!text.endsWith("\n")) text+="\n";   // Excel で文字化けしないよう、先頭に BOM を付けて保存する
+      text+=r.map(csvCell).join(",")+"\n";
+      try{
+        await gh(`/repos/${OWNER}/${REPO}/contents/${L.file}`,{method:"PUT",body:Object.assign({message:`${L.file} に ${p.name}(${r[1]})を追加(登録ページから)`,content:b64enc(text),branch:"main"},cur.sha?{sha:cur.sha}:{})});
+        break;
+      }catch(e){ if(e.status!==409&&e.status!==422||attempt===2) throw e }   // 途中で別の更新が入ったら、読み直してやり直す
+    }
+    const fresh=await readList(KIND);CUR[KIND]=fresh.rows;renderCur();
+    $("memo").value="";fillPlayers();
+    setStatus("msg",`登録した。1〜2分でランキングに反映される。`,"ok");
+  }catch(e){
+    setStatus("msg","登録できなかった: "+e.message+(e.status===401?"(ログインが切れた。ログインし直す)":e.status===403||e.status===404?"(このアカウントか GitHub App に、ranking への書き込み権限が無い)":""),"err");
+    preview();
+  }
+});
+
+/* ---------- ログイン(アップロードページと同じ仕組み・同じ保存場所) ---------- */
+const saveLogin=v=>{try{v?localStorage.setItem(TOKEN_KEY,JSON.stringify(v)):localStorage.removeItem(TOKEN_KEY)}catch(_){}};
+const loadLogin=()=>{try{return JSON.parse(localStorage.getItem(TOKEN_KEY)||"null")}catch(_){return null}};
+function loggedOut(msg,cls){TOKEN="";$("login").hidden=false;$("who").hidden=true;$("logout").hidden=true;$("form").hidden=true;$("lists").hidden=true;setStatus("auth",msg||"",cls)}
+async function useToken(t,login){
+  TOKEN=t;setStatus("auth","確かめている…");
+  try{
+    const me=login||(await gh("/user")).login,repo=await gh(`/repos/${OWNER}/${REPO}`);
+    $("login").hidden=true;$("who").hidden=false;$("logout").hidden=false;$("who").textContent=me+" でログイン中";
+    if(!(repo.permissions&&repo.permissions.push)){setStatus("auth","ranking に書き込む権限が無いアカウント。管理者のアカウントでログインし直す。","err");return me}
+    setStatus("auth","参加者を読み込んでいる…");
+    const [, b, a]=await Promise.all([loadPlayers(),readList("ban"),readList("acct")]);
+    CUR={ban:b.rows,acct:a.rows};
+    fillMonths();renderCur();selectKind(KIND);
+    $("form").hidden=false;$("lists").hidden=false;
+    setStatus("auth",`参加者 ${PLAYERS.length}人・対局記録 ${MONTHS.length}か月分を読んだ。`);
+    return me;
+  }catch(e){
+    saveLogin(null);
+    loggedOut(e.status===401?"ログインが切れた。もう一度ログインする。":e.status===404?"ranking が見えない。GitHub App が ranking に入っているか確かめる。":"確かめられなかった: "+e.message,"err");
+  }
+}
+$("login").addEventListener("click",()=>{
+  if(!CLIENT_ID||!LOGIN_ENDPOINT){setStatus("auth","ログインの設定(splitdata-download の config.js)が読めない。","err");return}
+  const state=[...crypto.getRandomValues(new Uint8Array(16))].map(x=>x.toString(16).padStart(2,"0")).join("");
+  try{sessionStorage.setItem(STATE_KEY,state)}catch(_){}
+  location.href="https://github.com/login/oauth/authorize?"+new URLSearchParams({client_id:CLIENT_ID,redirect_uri:location.origin+location.pathname,state});
+});
+$("logout").addEventListener("click",()=>{saveLogin(null);loggedOut("ログアウトした。")});
+(async()=>{
+  const q=new URLSearchParams(location.search),code=q.get("code"),state=q.get("state"),err=q.get("error");
+  if(code||err){
+    history.replaceState(null,"",location.pathname);
+    let want=null;try{want=sessionStorage.getItem(STATE_KEY);sessionStorage.removeItem(STATE_KEY)}catch(_){}
+    if(err){loggedOut(err==="redirect_uri_mismatch"?"GitHub App にこのページの Callback URL が登録されていない(README の手順で足す)。":"ログインを取りやめた。","err");return}
+    if(!want||want!==state){loggedOut("ログインの確認が合わない。もう一度ログインする。","err");return}
+    setStatus("auth","ログインしている…(数秒かかる)");
+    try{
+      const res=await fetch(LOGIN_ENDPOINT,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({code}),redirect:"follow"});
+      const r=await res.json();
+      if(!r.ok){loggedOut("ログインできなかった: "+r.error+(r.detail?" "+r.detail:""),"err");return}
+      const v={token:r.token,expires:r.expiresIn?Date.now()+r.expiresIn*1000:null},me=await useToken(v.token);
+      if(me){v.login=me;saveLogin(v)}
+    }catch(e){loggedOut("ログインできなかった: "+e.message,"err")}
+    return;
+  }
+  const v=loadLogin();
+  if(v&&v.token&&(!v.expires||v.expires>Date.now()+60000)) useToken(v.token,v.login); else loggedOut("");
+})();
+</script>
+</body>
+</html>
