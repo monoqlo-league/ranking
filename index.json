@@ -1,6 +1,6 @@
 {
- "generated": "2026-11-05T08:49:41+00:00",
- "latest": "2026-11-05T08:49:32Z",
+ "generated": "2026-11-05T17:58:46+00:00",
+ "latest": "2026-11-05T17:58:37Z",
  "files": {
   "account-change.csv": {
    "updated": "2026-11-01T03:26:42Z",
@@ -81,9 +81,9 @@
    "games": 546
   },
   "data/202611.csv": {
-   "updated": "2026-11-05T08:49:32Z",
-   "size": 31429,
-   "games": 126
+   "updated": "2026-11-05T17:58:37Z",
+   "size": 35128,
+   "games": 141
   },
   "summary/202509-summary.csv": {
    "updated": "2026-10-06T16:15:54Z",
