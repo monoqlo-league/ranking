@@ -1,6 +1,6 @@
 {
- "generated": "2026-11-07T02:01:47+00:00",
- "latest": "2026-11-07T02:01:36Z",
+ "generated": "2026-11-07T23:15:22+00:00",
+ "latest": "2026-11-07T23:15:13Z",
  "files": {
   "account-change.csv": {
    "updated": "2026-11-01T03:26:42Z",
@@ -138,8 +138,8 @@
    "size": 604390
   },
   "summary/202610-summary.csv": {
-   "updated": "2026-11-03T13:48:10Z",
-   "size": 502436
+   "updated": "2026-11-07T23:15:13Z",
+   "size": 588418
   },
   "summary/202611-summary.csv": {
    "updated": "2026-11-03T13:36:13Z",
